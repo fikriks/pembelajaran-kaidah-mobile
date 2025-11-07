@@ -35,9 +35,8 @@ public interface ApiService {
     );
 
     @GET(ApiConstants.AUTH_PROFILE)
-    Call<ApiResponse<Siswa>> getProfile(
-            @Header("Authorization") String token
-    );
+    Call<ApiResponse<Siswa>> getProfile();
+            // No authorization required for simplicity
 
     // ===================
     // KAIDAH/MATERI
@@ -45,19 +44,19 @@ public interface ApiService {
 
     @GET(ApiConstants.KAIDAH_LIST)
     Call<ApiResponse<List<MateriKaidah>>> getKaidahList(
-            @Header("Authorization") String token
+            
     );
 
     @GET(ApiConstants.KAIDAH_DETAIL)
     Call<ApiResponse<MateriKaidah>> getKaidahDetail(
             @Path("id") int kaidahId,
-            @Header("Authorization") String token
+            
     );
 
     @GET(ApiConstants.KAIDAH_PROGRESS)
     Call<ApiResponse<RiwayatBelajar>> getKaidahProgress(
             @Path("id") int kaidahId,
-            @Header("Authorization") String token
+            
     );
 
     // ===================
@@ -67,37 +66,37 @@ public interface ApiService {
     @POST(ApiConstants.SESI_START)
     Call<ApiResponse<SesiLatihan>> startSesi(
             @Body Map<String, Object> sesiRequest,
-            @Header("Authorization") String token
+            
     );
 
     @GET(ApiConstants.SESI_ACTIVE)
     Call<ApiResponse<Map<String, Object>>> getActiveSesi(
-            @Header("Authorization") String token
+            
     );
 
     @GET(ApiConstants.SESI_DETAIL)
     Call<ApiResponse<SesiLatihan>> getSesiDetail(
             @Path("id") int sesiId,
-            @Header("Authorization") String token
+            
     );
 
     @POST(ApiConstants.SESI_JAWAB)
     Call<ApiResponse<Map<String, Object>>> submitJawaban(
             @Path("id") int sesiId,
             @Body Map<String, Object> jawabanRequest,
-            @Header("Authorization") String token
+            
     );
 
     @POST(ApiConstants.SESI_FINISH)
     Call<ApiResponse<SesiLatihan>> finishSesi(
             @Path("id") int sesiId,
-            @Header("Authorization") String token
+            
     );
 
     @GET(ApiConstants.SESI_HASIL)
     Call<ApiResponse<Map<String, Object>>> getHasilSesi(
             @Path("id") int sesiId,
-            @Header("Authorization") String token
+            
     );
 
     // ===================
@@ -106,19 +105,19 @@ public interface ApiService {
 
     @GET(ApiConstants.PROGRESS_LIST)
     Call<ApiResponse<List<RiwayatBelajar>>> getProgressList(
-            @Header("Authorization") String token
+            
     );
 
     @GET(ApiConstants.HISTORY_LIST)
     Call<ApiResponse<List<SesiLatihan>>> getHistoryList(
             @Query("limit") int limit,
             @Query("offset") int offset,
-            @Header("Authorization") String token
+            
     );
 
     @GET(ApiConstants.STATISTIK)
     Call<ApiResponse<Map<String, Object>>> getStatistik(
-            @Header("Authorization") String token
+            
     );
 
     // ===================
@@ -137,7 +136,7 @@ public interface ApiService {
     @POST("device/update")
     Call<ApiResponse<Map<String, String>>> updateDeviceInfo(
             @Body Map<String, String> deviceInfo,
-            @Header("Authorization") String token
+            
     );
 
     /**
@@ -145,6 +144,6 @@ public interface ApiService {
      */
     @POST("logout")
     Call<ApiResponse<Map<String, String>>> logout(
-            @Header("Authorization") String token
+            
     );
 }
