@@ -35,8 +35,9 @@ public interface ApiService {
     );
 
     @GET(ApiConstants.AUTH_PROFILE)
-    Call<ApiResponse<Siswa>> getProfile();
-            // No authorization required for simplicity
+    Call<ApiResponse<Siswa>> getProfile(
+            @Header("Authorization") String sessionToken
+    );
 
     // ===================
     // KAIDAH/MATERI
@@ -144,6 +145,6 @@ public interface ApiService {
      */
     @POST("logout")
     Call<ApiResponse<Map<String, String>>> logout(
-            
+            @Header("Authorization") String sessionToken
     );
 }

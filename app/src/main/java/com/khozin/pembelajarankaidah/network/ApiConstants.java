@@ -33,8 +33,7 @@ public class ApiConstants {
     // HTTP Headers
     public static final String HEADER_CONTENT_TYPE = "Content-Type: application/json";
     public static final String HEADER_ACCEPT = "Accept: application/json";
-    // No authorization required for simplicity
-    // public static final String HEADER_AUTHORIZATION = "Authorization: Bearer ";
+    public static final String HEADER_AUTHORIZATION = "Authorization: Bearer ";
 
     // Request Timeouts (dalam detik)
     public static final int CONNECT_TIMEOUT = 30;
