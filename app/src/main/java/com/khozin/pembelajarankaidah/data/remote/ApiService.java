@@ -1,0 +1,150 @@
+package com.khozin.pembelajarankaidah.data.remote;
+
+import com.khozin.pembelajarankaidah.data.model.ApiResponse;
+import com.khozin.pembelajarankaidah.data.model.LoginResponse;
+import com.khozin.pembelajarankaidah.data.model.Siswa;
+import com.khozin.pembelajarankaidah.data.model.MateriKaidah;
+import com.khozin.pembelajarankaidah.data.model.SesiLatihan;
+import com.khozin.pembelajarankaidah.data.model.RiwayatBelajar;
+import com.khozin.pembelajarankaidah.network.ApiConstants;
+
+import java.util.List;
+import java.util.Map;
+
+import retrofit2.Call;
+import retrofit2.http.*;
+
+/**
+ * Main API Service interface untuk Retrofit
+ * Covers semua endpoints yang dibutuhkan mobile app
+ */
+public interface ApiService {
+
+    // ===================
+    // AUTHENTICATION
+    // ===================
+
+    @POST(ApiConstants.AUTH_LOGIN)
+    Call<ApiResponse<LoginResponse>> login(
+            @Body Map<String, String> loginRequest
+    );
+
+    @POST(ApiConstants.AUTH_REGISTER)
+    Call<ApiResponse<Siswa>> register(
+            @Body Map<String, String> registerRequest
+    );
+
+    @GET(ApiConstants.AUTH_PROFILE)
+    Call<ApiResponse<Siswa>> getProfile(
+            @Header("Authorization") String token
+    );
+
+    // ===================
+    // KAIDAH/MATERI
+    // ===================
+
+    @GET(ApiConstants.KAIDAH_LIST)
+    Call<ApiResponse<List<MateriKaidah>>> getKaidahList(
+            @Header("Authorization") String token
+    );
+
+    @GET(ApiConstants.KAIDAH_DETAIL)
+    Call<ApiResponse<MateriKaidah>> getKaidahDetail(
+            @Path("id") int kaidahId,
+            @Header("Authorization") String token
+    );
+
+    @GET(ApiConstants.KAIDAH_PROGRESS)
+    Call<ApiResponse<RiwayatBelajar>> getKaidahProgress(
+            @Path("id") int kaidahId,
+            @Header("Authorization") String token
+    );
+
+    // ===================
+    // SESI LATIHAN
+    // ===================
+
+    @POST(ApiConstants.SESI_START)
+    Call<ApiResponse<SesiLatihan>> startSesi(
+            @Body Map<String, Object> sesiRequest,
+            @Header("Authorization") String token
+    );
+
+    @GET(ApiConstants.SESI_ACTIVE)
+    Call<ApiResponse<Map<String, Object>>> getActiveSesi(
+            @Header("Authorization") String token
+    );
+
+    @GET(ApiConstants.SESI_DETAIL)
+    Call<ApiResponse<SesiLatihan>> getSesiDetail(
+            @Path("id") int sesiId,
+            @Header("Authorization") String token
+    );
+
+    @POST(ApiConstants.SESI_JAWAB)
+    Call<ApiResponse<Map<String, Object>>> submitJawaban(
+            @Path("id") int sesiId,
+            @Body Map<String, Object> jawabanRequest,
+            @Header("Authorization") String token
+    );
+
+    @POST(ApiConstants.SESI_FINISH)
+    Call<ApiResponse<SesiLatihan>> finishSesi(
+            @Path("id") int sesiId,
+            @Header("Authorization") String token
+    );
+
+    @GET(ApiConstants.SESI_HASIL)
+    Call<ApiResponse<Map<String, Object>>> getHasilSesi(
+            @Path("id") int sesiId,
+            @Header("Authorization") String token
+    );
+
+    // ===================
+    // PROGRESS & STATISTIK
+    // ===================
+
+    @GET(ApiConstants.PROGRESS_LIST)
+    Call<ApiResponse<List<RiwayatBelajar>>> getProgressList(
+            @Header("Authorization") String token
+    );
+
+    @GET(ApiConstants.HISTORY_LIST)
+    Call<ApiResponse<List<SesiLatihan>>> getHistoryList(
+            @Query("limit") int limit,
+            @Query("offset") int offset,
+            @Header("Authorization") String token
+    );
+
+    @GET(ApiConstants.STATISTIK)
+    Call<ApiResponse<Map<String, Object>>> getStatistik(
+            @Header("Authorization") String token
+    );
+
+    // ===================
+    // UTILITY METHODS
+    // ===================
+
+    /**
+     * Check koneksi ke server
+     */
+    @GET("ping")
+    Call<ApiResponse<Map<String, String>>> ping();
+
+    /**
+     * Update device info untuk tracking
+     */
+    @POST("device/update")
+    Call<ApiResponse<Map<String, String>>> updateDeviceInfo(
+            @Body Map<String, String> deviceInfo,
+            @Header("Authorization") String token
+    );
+
+    /**
+     * Logout (invalidate token di server)
+     */
+    @POST("logout")
+    Call<ApiResponse<Map<String, String>>> logout(
+            @Header("Authorization") String token
+    );
+}
