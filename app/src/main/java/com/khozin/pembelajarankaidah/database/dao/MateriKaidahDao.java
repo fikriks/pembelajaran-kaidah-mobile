@@ -287,11 +287,12 @@ public interface MateriKaidahDao {
 
     /**
      * Get materi recommendation untuk siswa
+     * Only get materi that are not yet completed or have low progress
      */
     @Query("SELECT mk.* FROM materi_kaidah mk " +
-            "LEFT JOIN riwayat_belajar rb ON mk.id_materi = rb.id_materi AND rb.id_siswa = :siswaId " +
-            "WHERE rb.id_riwayat IS NULL OR rb.status = 'belum_dimulai' OR " +
-            "(rb.status = 'sedang_belajar' AND rb.persentase_penguasaan < 50) " +
+            "WHERE mk.id_materi NOT IN " +
+            "(SELECT rb.id_materi FROM riwayat_belajar rb " +
+            "WHERE rb.id_siswa = :siswaId AND rb.status = 'selesai') " +
             "ORDER BY mk.urutan ASC " +
             "LIMIT :limit")
     List<MateriKaidah> getRekomendasiMateri(int siswaId, int limit);

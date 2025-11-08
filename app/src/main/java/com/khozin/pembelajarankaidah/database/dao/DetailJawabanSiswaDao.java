@@ -266,8 +266,9 @@ public interface DetailJawabanSiswaDao {
 
     /**
      * Get detail jawaban yang perlu di-review
+     * Optimized query with only essential columns
      */
-    @Query("SELECT * FROM detail_jawaban_siswa WHERE " +
+    @Query("SELECT id_detail, id_sesi, id_soal, id_pilihan, urutan_soal, is_benar, waktu_jawab, waktu_respons_detik, is_reviewed FROM detail_jawaban_siswa WHERE " +
             "(is_benar = 0 OR is_reviewed = 0) AND " +
             "waktu_jawab >= :sinceTime " +
             "ORDER BY waktu_jawab DESC " +

@@ -27,12 +27,17 @@ import com.google.gson.annotations.SerializedName;
             @ForeignKey(entity = Siswa.class,
                     parentColumns = "id",
                     childColumns = "id_siswa",
-                    onDelete = ForeignKey.CASCADE),
+                    onDelete = ForeignKey.CASCADE,
+                    onUpdate = ForeignKey.CASCADE,
+                    deferred = true),
             @ForeignKey(entity = MateriKaidah.class,
                     parentColumns = "id_materi",
                     childColumns = "id_materi",
-                    onDelete = ForeignKey.CASCADE)
-        })
+                    onDelete = ForeignKey.CASCADE,
+                    onUpdate = ForeignKey.CASCADE,
+                    deferred = true)
+        }
+    )
 public class RiwayatBelajar {
 
     @PrimaryKey(autoGenerate = true)

@@ -406,4 +406,10 @@ public interface RiwayatBelajarDao {
             "HAVING MAX(sl.waktu_mulai) " +
             "ORDER BY MAX(sl.waktu_mulai) DESC")
     List<RiwayatBelajar> getRiwayatWithLastActivity(int siswaId);
+
+    /**
+     * Debug: Get count of existing riwayat
+     */
+    @Query("SELECT COUNT(*) FROM riwayat_belajar")
+    int getDebugRiwayatCount();
 }

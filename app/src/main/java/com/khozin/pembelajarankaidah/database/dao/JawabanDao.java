@@ -236,13 +236,15 @@ public interface JawabanDao {
 
     /**
      * Get jawaban yang jarang dipilih
+     * Optimized query that only returns jawaban IDs with minimal data
      */
-    @Query("SELECT j.* FROM jawaban j " +
+    @Query("SELECT j.id_pilihan FROM jawaban j " +
             "LEFT JOIN detail_jawaban_siswa djs ON j.id_pilihan = djs.id_pilihan " +
             "LEFT JOIN sesi_latihan sl ON djs.id_sesi = sl.id_sesi AND sl.id_siswa = :siswaId " +
             "GROUP BY j.id_pilihan " +
-            "ORDER BY COUNT(djs.id_detail) ASC")
-    List<Jawaban> getJawabanJarangDipilih(int siswaId);
+            "ORDER BY COUNT(djs.id_detail) ASC " +
+            "LIMIT 10")
+    List<Integer> getJawabanJarangDipilihIds(int siswaId);
 
     /**
      * Get jawaban statistics

@@ -234,15 +234,17 @@ public interface SoalDao {
 
     /**
      * Get soal yang sulit (benar rate < 50%)
+     * Optimized query that only returns soal data
      */
-    @Query("SELECT s.* FROM soal s " +
+    @Query("SELECT s.id_soal FROM soal s " +
             "INNER JOIN detail_jawaban_siswa djs ON s.id_soal = djs.id_soal " +
             "INNER JOIN sesi_latihan sl ON djs.id_sesi = sl.id_sesi " +
             "WHERE sl.id_siswa = :siswaId " +
             "GROUP BY s.id_soal " +
             "HAVING (CAST(COUNT(CASE WHEN djs.is_benar = 1 THEN 1 END) AS FLOAT) / COUNT(djs.id_detail)) < 0.5 " +
-            "ORDER BY (CAST(COUNT(CASE WHEN djs.is_benar = 1 THEN 1 END) AS FLOAT) / COUNT(djs.id_detail)) ASC")
-    List<Soal> getSoalSulit(int siswaId);
+            "ORDER BY (CAST(COUNT(CASE WHEN djs.is_benar = 1 THEN 1 END) AS FLOAT) / COUNT(djs.id_detail)) ASC " +
+            "LIMIT 20")
+    List<Integer> getSoalSulitIds(int siswaId);
 
     /**
      * Get random soal untuk practice

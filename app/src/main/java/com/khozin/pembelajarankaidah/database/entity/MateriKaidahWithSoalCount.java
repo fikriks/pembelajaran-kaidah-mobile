@@ -22,9 +22,6 @@ public class MateriKaidahWithSoalCount {
     @ColumnInfo(name = "contoh")
     public String contoh;
 
-    @ColumnInfo(name = "tingkat_kesulitan")
-    public String tingkatKesulitan;
-
     @ColumnInfo(name = "urutan")
     public int urutan;
 

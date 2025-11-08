@@ -263,8 +263,9 @@ public interface SesiLatihanDao {
     /**
      * Get sesi dengan materi info
      */
-    @SuppressWarnings(RoomWarnings.CURSOR_MISMATCH)
-    @Query("SELECT sl.*, mk.judul_kaidah as materi_judul FROM sesi_latihan sl " +
+    @Query("SELECT sl.id_sesi, sl.id_siswa, sl.id_materi, sl.seed_digunakan, sl.total_soal, sl.soal_benar, sl.skor, " +
+            "sl.waktu_mulai, sl.waktu_selesai, sl.durasi_detik, sl.status, sl.waktu_dibuat, mk.judul_kaidah as materi_judul " +
+            "FROM sesi_latihan sl " +
             "INNER JOIN materi_kaidah mk ON sl.id_materi = mk.id_materi " +
             "WHERE sl.id_siswa = :siswaId ORDER BY sl.id_sesi DESC")
     List<SesiWithMateriInfo> getSesiWithMateriInfo(int siswaId);
