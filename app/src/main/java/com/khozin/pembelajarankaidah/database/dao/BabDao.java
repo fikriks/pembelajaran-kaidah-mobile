@@ -86,9 +86,9 @@ public interface BabDao {
     Bab getBabByChapterCode(String chapterCode);
 
     /**
-     * Get bab by nomor
+     * Get bab by nomor (extracted from nama_bab like "BAB 1: KALAM")
      */
-    @Query("SELECT * FROM bab WHERE nomor = :nomor LIMIT 1")
+    @Query("SELECT * FROM bab WHERE nama_bab LIKE :nomor || ':%' LIMIT 1")
     Bab getBabByNomor(String nomor);
 
     /**
