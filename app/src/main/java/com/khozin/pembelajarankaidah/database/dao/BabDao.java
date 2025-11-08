@@ -86,6 +86,12 @@ public interface BabDao {
     Bab getBabByChapterCode(String chapterCode);
 
     /**
+     * Get bab by nomor
+     */
+    @Query("SELECT * FROM bab WHERE nomor = :nomor LIMIT 1")
+    Bab getBabByNomor(String nomor);
+
+    /**
      * Get bab by urutan
      */
     @Query("SELECT * FROM bab WHERE urutan = :urutan AND is_active = 1 LIMIT 1")

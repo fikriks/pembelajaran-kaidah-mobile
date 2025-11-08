@@ -413,8 +413,9 @@ public class KaidahListFragment extends Fragment {
                         kaidahGroupList = groupedResponse.getData().getGroups();
                         Log.d("KAIDAH_DEBUG", "API returned " + kaidahGroupList.size() + " kaidah groups");
 
-                        // Update progress from local database on background thread
+                        // Save fetched data to Room database on background thread
                         Executors.newSingleThreadExecutor().execute(() -> {
+                            saveKaidahGroupsToDatabase(kaidahGroupList);
                             updateProgressFromLocalDatabase();
 
                             // Update UI on main thread after progress is updated
@@ -610,6 +611,86 @@ public class KaidahListFragment extends Fragment {
 
         } catch (Exception e) {
             Log.e("KAIDAH_DEBUG", "Error updating progress from local database", e);
+        }
+    }
+
+    /**
+     * Save kaidah groups from API to Room database
+     * This ensures data is available offline and reduces API calls
+     */
+    private void saveKaidahGroupsToDatabase(List<KaidahGroup> groups) {
+        if (groups == null || groups.isEmpty()) {
+            Log.d("KAIDAH_DEBUG", "No groups to save to database");
+            return;
+        }
+
+        Log.d("KAIDAH_DEBUG", "Saving " + groups.size() + " kaidah groups to database...");
+
+        try {
+            int totalKaidahSaved = 0;
+            int totalGroupsSaved = 0;
+
+            for (KaidahGroup group : groups) {
+                // Save Bab information if it exists
+                if (group.getBab() != null) {
+                    try {
+                        // Check if bab already exists to avoid duplicates
+                        Bab existingBab = database.babDao().getBabByNomor(group.getBab().getNomor());
+                        if (existingBab == null) {
+                            // Insert new bab
+                            database.babDao().insert(group.getBab());
+                            Log.d("KAIDAH_DEBUG", "Saved new Bab: " + group.getBab().getNomor());
+                        } else {
+                            Log.d("KAIDAH_DEBUG", "Bab already exists: " + group.getBab().getNomor());
+                        }
+                    } catch (Exception e) {
+                        Log.e("KAIDAH_DEBUG", "Error saving bab " + group.getBab().getNomor(), e);
+                    }
+                }
+
+                // Save individual kaidah items
+                if (group.getKaidahList() != null) {
+                    for (MateriKaidah kaidah : group.getKaidahList()) {
+                        try {
+                            // Check if kaidah already exists
+                            MateriKaidah existingKaidah = database.materiKaidahDao().getMateriById(kaidah.getIdMateri());
+                            if (existingKaidah == null) {
+                                // Set default values for new kaidah
+                                kaidah.setProgressPercentage(0);
+                                kaidah.setCompleted(false);
+                                kaidah.setTotalSoal(0); // Will be updated when soal are loaded
+
+                                // Insert new kaidah
+                                database.materiKaidahDao().insertMateriKaidah(kaidah);
+                                totalKaidahSaved++;
+                                Log.d("KAIDAH_DEBUG", "Saved new Kaidah: " + kaidah.getIdMateri() + " - " + kaidah.getJudulKaidah());
+                            } else {
+                                // Update existing kaidah with latest data from API (preserve progress)
+                                existingKaidah.setJudulKaidah(kaidah.getJudulKaidah());
+                                existingKaidah.setDeskripsi(kaidah.getDeskripsi());
+                                existingKaidah.setPenjelasan(kaidah.getPenjelasan());
+                                existingKaidah.setContoh(kaidah.getContoh());
+                                existingKaidah.setTingkatKesulitan(kaidah.getTingkatKesulitan());
+                                existingKaidah.setUrutan(kaidah.getUrutan());
+                                existingKaidah.setDibuatOleh(kaidah.getDibuatOleh());
+                                existingKaidah.setWaktuDibuat(kaidah.getWaktuDibuat());
+                                existingKaidah.setWaktuDiubah(kaidah.getWaktuDiubah());
+
+                                database.materiKaidahDao().updateMateriKaidah(existingKaidah);
+                                Log.d("KAIDAH_DEBUG", "Updated existing Kaidah: " + kaidah.getIdMateri());
+                            }
+                        } catch (Exception e) {
+                            Log.e("KAIDAH_DEBUG", "Error saving kaidah " + kaidah.getIdMateri(), e);
+                        }
+                    }
+                }
+                totalGroupsSaved++;
+            }
+
+            Log.d("KAIDAH_DEBUG", "Successfully saved " + totalGroupsSaved + " groups and " + totalKaidahSaved + " kaidah to database");
+
+        } catch (Exception e) {
+            Log.e("KAIDAH_DEBUG", "Error saving kaidah groups to database", e);
         }
     }
 
