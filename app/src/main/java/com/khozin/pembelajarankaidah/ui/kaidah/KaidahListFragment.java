@@ -20,6 +20,7 @@ import com.khozin.pembelajarankaidah.R;
 import com.khozin.pembelajarankaidah.adapter.KaidahAdapter;
 import com.khozin.pembelajarankaidah.adapter.KaidahGroupAdapter;
 import com.khozin.pembelajarankaidah.data.model.MateriKaidah;
+import com.khozin.pembelajarankaidah.data.model.Bab;
 import com.khozin.pembelajarankaidah.data.model.KaidahGroup;
 import com.khozin.pembelajarankaidah.data.model.KaidahListResponse;
 import com.khozin.pembelajarankaidah.data.model.KaidahGroupedResponse;
@@ -635,16 +636,17 @@ public class KaidahListFragment extends Fragment {
                 if (group.getBab() != null) {
                     try {
                         // Check if bab already exists to avoid duplicates
-                        Bab existingBab = database.babDao().getBabByNomor(group.getBab().getNomor());
+                        String nomorBab = group.getBab().getNomorBab();
+                        Bab existingBab = database.babDao().getBabByNomor(nomorBab);
                         if (existingBab == null) {
                             // Insert new bab
                             database.babDao().insert(group.getBab());
-                            Log.d("KAIDAH_DEBUG", "Saved new Bab: " + group.getBab().getNomor());
+                            Log.d("KAIDAH_DEBUG", "Saved new Bab: " + nomorBab);
                         } else {
-                            Log.d("KAIDAH_DEBUG", "Bab already exists: " + group.getBab().getNomor());
+                            Log.d("KAIDAH_DEBUG", "Bab already exists: " + nomorBab);
                         }
                     } catch (Exception e) {
-                        Log.e("KAIDAH_DEBUG", "Error saving bab " + group.getBab().getNomor(), e);
+                        Log.e("KAIDAH_DEBUG", "Error saving bab " + group.getBab().getNomorBab(), e);
                     }
                 }
 
@@ -653,7 +655,7 @@ public class KaidahListFragment extends Fragment {
                     for (MateriKaidah kaidah : group.getKaidahList()) {
                         try {
                             // Check if kaidah already exists
-                            MateriKaidah existingKaidah = database.materiKaidahDao().getMateriById(kaidah.getIdMateri());
+                            MateriKaidah existingKaidah = database.materiKaidahDao().getById(kaidah.getIdMateri());
                             if (existingKaidah == null) {
                                 // Set default values for new kaidah
                                 kaidah.setProgressPercentage(0);
@@ -661,7 +663,7 @@ public class KaidahListFragment extends Fragment {
                                 kaidah.setTotalSoal(0); // Will be updated when soal are loaded
 
                                 // Insert new kaidah
-                                database.materiKaidahDao().insertMateriKaidah(kaidah);
+                                database.materiKaidahDao().insert(kaidah);
                                 totalKaidahSaved++;
                                 Log.d("KAIDAH_DEBUG", "Saved new Kaidah: " + kaidah.getIdMateri() + " - " + kaidah.getJudulKaidah());
                             } else {
@@ -670,13 +672,13 @@ public class KaidahListFragment extends Fragment {
                                 existingKaidah.setDeskripsi(kaidah.getDeskripsi());
                                 existingKaidah.setPenjelasan(kaidah.getPenjelasan());
                                 existingKaidah.setContoh(kaidah.getContoh());
-                                existingKaidah.setTingkatKesulitan(kaidah.getTingkatKesulitan());
+                                // tingkatKesulitan field doesn't exist in MateriKaidah model
                                 existingKaidah.setUrutan(kaidah.getUrutan());
                                 existingKaidah.setDibuatOleh(kaidah.getDibuatOleh());
                                 existingKaidah.setWaktuDibuat(kaidah.getWaktuDibuat());
                                 existingKaidah.setWaktuDiubah(kaidah.getWaktuDiubah());
 
-                                database.materiKaidahDao().updateMateriKaidah(existingKaidah);
+                                database.materiKaidahDao().update(existingKaidah);
                                 Log.d("KAIDAH_DEBUG", "Updated existing Kaidah: " + kaidah.getIdMateri());
                             }
                         } catch (Exception e) {
