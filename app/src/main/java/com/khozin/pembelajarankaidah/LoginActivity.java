@@ -104,6 +104,9 @@ public class LoginActivity extends AppCompatActivity {
             public void afterTextChanged(Editable s) {}
         });
 
+  
+        // Password toggle is handled automatically by Material Design (endIconMode="password_toggle")
+
         // Login button click
         btnLogin.setOnClickListener(v -> attemptLogin());
     }
@@ -169,7 +172,9 @@ public class LoginActivity extends AppCompatActivity {
             errorMessage.toLowerCase().contains("credential")) {
             // Authentication error
             tilNis.setError("NIS atau password salah");
-            tilPassword.requestFocus();
+            // Clear password error to avoid icon conflict with password toggle
+            tilPassword.setError(null);
+            tilNis.requestFocus();
         } else if (errorMessage.toLowerCase().contains("network") ||
                    errorMessage.toLowerCase().contains("koneksi")) {
             // Network error

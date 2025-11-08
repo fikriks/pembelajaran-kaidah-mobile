@@ -101,6 +101,8 @@
                 android:hint="Password"
                 app:boxStrokeColor="@color/primary_green"
                 app:endIconMode="password_toggle"
+                app:endIconTint="@color/text_hint"
+                app:errorIconDrawable="@null"
                 app:hintTextColor="@color/text_hint">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -119,7 +121,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="32dp"
                 android:text="Masuk"
-                android:textColor="@color/text_on_primary" />
+                android:textColor="@color/text_on_primary"
+                android:backgroundTint="@color/primary_green" />
 
             <!-- Progress Indicator -->
             <ProgressBar
@@ -133,19 +136,7 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/btnLogin" />
 
-            <!-- Register Link -->
-            <TextView
-                android:id="@+id/tvRegister"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:layout_marginTop="16dp"
-                android:text="Belum punya akun? Daftar"
-                android:textAppearance="@style/TextAppearance.PembelajaranKaidah.BodyMedium"
-                android:textColor="@color/primary_green"
-                android:clickable="true"
-                android:focusable="true" />
-
+  
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 
