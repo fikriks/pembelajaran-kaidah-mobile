@@ -1,0 +1,33 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+  <!-- Background Circle -->
+  <path
+      android:fillColor="#F5F5F5"
+      android:pathData="M60,10C32.4,10 10,32.4 10,60s22.4,50 50,50 50,-22.4 50,-50S87.6,10 60,10z"/>
+
+  <!-- Main Icon Background -->
+  <path
+      android:fillColor="#E0E0E0"
+      android:pathData="M60,25c-19.3,0 -35,15.7 -35,35s15.7,35 35,35 35,-15.7 35,-35S79.3,25 60,25z"/>
+
+  <!-- Document/Book Icon -->
+  <path
+      android:fillColor="#9E9E9E"
+      android:pathData="M45,40h30v-5h-30v5zM45,50h30v-3h-30v3zM45,58h30v-3h-30v3zM45,66h20v-3h-20v3z"/>
+
+  <!-- Small decorative elements -->
+  <path
+      android:fillColor="#BDBDBD"
+      android:pathData="M50,35h3v-2h-3v2zM67,35h3v-2h-3v2zM50,40h3v-2h-3v2zM67,40h3v-2h-3v2zM50,45h3v-2h-3v2zM60,45h10v-2h-10v2z"/>
+
+  <!-- Highlight accent -->
+  <path
+      android:fillColor="#4CAF50"
+      android:pathData="M85,30c-2.8,0 -5,2.2 -5,5s2.2,5 5,5 5,-2.2 5,-5S87.8,30 85,30z"/>
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M83.5,32l1.5,-1.5 -1.5,1.5v0z"/>
+</vector>

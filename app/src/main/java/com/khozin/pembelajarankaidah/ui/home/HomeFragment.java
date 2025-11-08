@@ -158,16 +158,35 @@ public class HomeFragment extends Fragment {
 
                 // Get completed kaidah for current user
                 int siswaId = sessionManager.getUserId();
-                // Count completed materi directly
-                kaidahSelesai = database.riwayatBelajarDao().countByStatus("selesai");
 
-                // Get total quiz sessions
-                totalQuiz = database.sesiLatihanDao().getTotalSesiSelesai(siswaId);
+                // Validate siswaId
+                if (siswaId == -1) {
+                    // User not logged in or invalid session
+                    kaidahSelesai = 0;
+                    totalQuiz = 0;
+                } else {
+                    // Count completed materi for current user only
+                    kaidahSelesai = database.riwayatBelajarDao().countBySiswaAndStatus(siswaId, "selesai");
+
+                    // Get total quiz sessions
+                    totalQuiz = database.sesiLatihanDao().getTotalSesiSelesai(siswaId);
+                }
 
                 // Calculate progress percentage
                 if (totalKaidah > 0) {
                     progressPercentage = ((float) kaidahSelesai / totalKaidah) * 100;
                 }
+
+                // Debug logging
+                android.util.Log.d("HomeFragment", String.format(
+                    "Statistics Debug:\n" +
+                    "Siswa ID: %d\n" +
+                    "Total Kaidah: %d\n" +
+                    "Kaidah Selesai: %d\n" +
+                    "Total Quiz: %d\n" +
+                    "Progress Percentage: %.2f",
+                    siswaId, totalKaidah, kaidahSelesai, totalQuiz, progressPercentage
+                ));
 
                 // Get average score
                 SesiLatihanStatistics stats = database.sesiLatihanDao().getSesiStatistics(siswaId);

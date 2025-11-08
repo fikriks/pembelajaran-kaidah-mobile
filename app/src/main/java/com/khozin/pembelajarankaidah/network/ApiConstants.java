@@ -15,9 +15,16 @@ public class ApiConstants {
     public static final String AUTH_REGISTER = "siswa/register";
     public static final String AUTH_PROFILE = "siswa/profile";
 
+    // BAB/CHAPTER ENDPOINTS
+    public static final String BAB_CHAPTERS = "bab/chapters";
+    public static final String BAB_CHAPTER_DETAIL = "bab/chapters/{chapterCode}";
+    public static final String BAB_PROGRESS_OVERVIEW = "kaidah/progress/overview";
+    public static final String BAB_OVERALL_PROGRESS = "kaidah/progress/overall";
+
     public static final String KAIDAH_LIST = "kaidah";
     public static final String KAIDAH_DETAIL = "kaidah/{id}";
     public static final String KAIDAH_PROGRESS = "kaidah/{id}/progress";
+    public static final String KAIDAH_GROUPED = "kaidah/grouped";
 
     public static final String SESI_START = "sesi/start";
     public static final String SESI_ACTIVE = "sesi/active";

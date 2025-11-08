@@ -309,8 +309,10 @@ public class LoginActivity extends AppCompatActivity {
         // Confirm exit
         if (btnLogin.isEnabled()) {
             super.onBackPressed();
+        } else {
+            // Jika sedang loading, tetap panggil super untuk mematuhi lifecycle
+            super.onBackPressed();
         }
-        // Jika sedang loading, prevent back press
     }
 
     @Override

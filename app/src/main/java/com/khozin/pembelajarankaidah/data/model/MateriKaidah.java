@@ -17,7 +17,12 @@ public class MateriKaidah {
 
     @PrimaryKey(autoGenerate = true)
     @ColumnInfo(name = "id_materi")
+    @SerializedName("id_materi")
     private int idMateri;
+
+    @SerializedName("id_bab")
+    @ColumnInfo(name = "id_bab")
+    private int idBab;
 
     @SerializedName("judul_kaidah")
     @NonNull
@@ -82,6 +87,14 @@ public class MateriKaidah {
 
     public void setIdMateri(int idMateri) {
         this.idMateri = idMateri;
+    }
+
+    public int getIdBab() {
+        return idBab;
+    }
+
+    public void setIdBab(int idBab) {
+        this.idBab = idBab;
     }
 
     @NonNull
@@ -220,6 +233,7 @@ public class MateriKaidah {
     public String toString() {
         return "MateriKaidah{" +
                 "idMateri=" + idMateri +
+                ", idBab=" + idBab +
                 ", judulKaidah='" + judulKaidah + '\'' +
                 ", urutan=" + urutan +
                 ", totalSoal=" + totalSoal +

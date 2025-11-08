@@ -18,6 +18,7 @@ import com.khozin.pembelajarankaidah.data.model.*;
 @Database(
     entities = {
         Siswa.class,
+        Bab.class,
         MateriKaidah.class,
         Soal.class,
         Jawaban.class,
@@ -25,13 +26,14 @@ import com.khozin.pembelajarankaidah.data.model.*;
         DetailJawabanSiswa.class,
         RiwayatBelajar.class
     },
-    version = 2,
+    version = 4,
     exportSchema = false
 )
 public abstract class AppDatabase extends RoomDatabase {
 
     // DAOs
     public abstract SiswaDao siswaDao();
+    public abstract BabDao babDao();
     public abstract MateriKaidahDao materiKaidahDao();
     public abstract SoalDao soalDao();
     public abstract JawabanDao jawabanDao();
@@ -124,9 +126,14 @@ public abstract class AppDatabase extends RoomDatabase {
         db.execSQL("CREATE INDEX IF NOT EXISTS index_siswa_status ON siswa(status)");
         db.execSQL("CREATE INDEX IF NOT EXISTS index_siswa_kelas ON siswa(kelas)");
 
+        // Bab indexes
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_bab_urutan ON bab(urutan)");
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_bab_active ON bab(is_active)");
+
         // MateriKaidah indexes
         db.execSQL("CREATE INDEX IF NOT EXISTS index_materi_kaidah_urutan ON materi_kaidah(urutan)");
         db.execSQL("CREATE INDEX IF NOT EXISTS index_materi_kaidah_tingkat ON materi_kaidah(tingkat_kesulitan)");
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_materi_kaidah_bab ON materi_kaidah(id_bab)");
 
         // SesiLatihan indexes
         db.execSQL("CREATE INDEX IF NOT EXISTS index_sesi_siswa ON sesi_latihan(id_siswa)");

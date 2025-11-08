@@ -168,6 +168,12 @@ public interface RiwayatBelajarDao {
     int getCountSelesai();
 
     /**
+     * Get count by siswa and status
+     */
+    @Query("SELECT COUNT(*) FROM riwayat_belajar WHERE id_siswa = :siswaId AND status = :status")
+    int countBySiswaAndStatus(int siswaId, String status);
+
+    /**
      * Search riwayat belajar
      */
     @Query("SELECT * FROM riwayat_belajar WHERE materi_judul LIKE '%' || :query || '%' ORDER BY waktu_diubah DESC")

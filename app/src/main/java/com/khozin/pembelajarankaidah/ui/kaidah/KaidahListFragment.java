@@ -5,8 +5,9 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import androidx.appcompat.widget.SearchView;
+import android.widget.TextView;
 import android.widget.Toast;
+import androidx.appcompat.widget.SearchView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -17,13 +18,16 @@ import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
 import com.khozin.pembelajarankaidah.R;
 import com.khozin.pembelajarankaidah.adapter.KaidahAdapter;
+import com.khozin.pembelajarankaidah.adapter.KaidahGroupAdapter;
 import com.khozin.pembelajarankaidah.data.model.MateriKaidah;
-import com.khozin.pembelajarankaidah.data.model.ApiResponse;
+import com.khozin.pembelajarankaidah.data.model.KaidahGroup;
 import com.khozin.pembelajarankaidah.data.model.KaidahListResponse;
+import com.khozin.pembelajarankaidah.data.model.KaidahGroupedResponse;
 import com.khozin.pembelajarankaidah.database.AppDatabase;
 import com.khozin.pembelajarankaidah.utils.SessionManager;
 import com.khozin.pembelajarankaidah.data.remote.ApiService;
 import com.khozin.pembelajarankaidah.network.RetrofitClient;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import retrofit2.Call;
@@ -32,26 +36,33 @@ import retrofit2.Response;
 
 /**
  * Fragment untuk menampilkan daftar materi kaidah
- * Dengan filter berdasarkan status dan search functionality
+ * Menampilkan daftar kaidah sederhana dengan search functionality
  */
 public class KaidahListFragment extends Fragment {
 
     // UI Components
     private RecyclerView rvKaidah;
     private SearchView searchView;
-    private MaterialCardView cardAll, cardBelum, cardSedang, cardSelesai;
+    private MaterialCardView cardAll, cardBelum, cardSelesai;
     private CircularProgressIndicator progressBar;
+    private View emptyStateLayout;
+    private TextView tvEmptyState;
 
     // Data
     private AppDatabase database;
     private SessionManager sessionManager;
     private KaidahAdapter kaidahAdapter;
+    private KaidahGroupAdapter kaidahGroupAdapter; // Keep for grouped display
     private KaidahViewModel viewModel;
     private ApiService apiService;
 
     // Filter states
     private String currentFilter = "all"; // all, belum, sedang, selesai
     private String currentSearch = "";
+
+    // Data holders
+    private List<MateriKaidah> allKaidahList = new ArrayList<>();
+    private List<KaidahGroup> kaidahGroupList = new ArrayList<>();
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -79,11 +90,12 @@ public class KaidahListFragment extends Fragment {
         rvKaidah = view.findViewById(R.id.rvKaidah);
         searchView = view.findViewById(R.id.searchView);
         progressBar = view.findViewById(R.id.progressBar);
+        emptyStateLayout = view.findViewById(R.id.llEmptyState);
+        tvEmptyState = emptyStateLayout.findViewById(R.id.tvEmptyTitle);
 
         // Filter cards
         cardAll = view.findViewById(R.id.cardAll);
         cardBelum = view.findViewById(R.id.cardBelum);
-        cardSedang = view.findViewById(R.id.cardSedang);
         cardSelesai = view.findViewById(R.id.cardSelesai);
     }
 
@@ -100,12 +112,28 @@ public class KaidahListFragment extends Fragment {
      * Setup RecyclerView
      */
     private void setupRecyclerView() {
-        kaidahAdapter = new KaidahAdapter();
-        rvKaidah.setLayoutManager(new LinearLayoutManager(getContext()));
-        rvKaidah.setAdapter(kaidahAdapter);
+        // Setup grouped adapter (for simple list with bab headers and progress)
+        kaidahGroupAdapter = new KaidahGroupAdapter();
 
-        // Set click listener
-        kaidahAdapter.setOnKaidahClickListener(this::onKaidahClick);
+        // Set adapter
+        rvKaidah.setAdapter(kaidahGroupAdapter);
+
+        // Set LayoutManager
+        rvKaidah.setLayoutManager(new LinearLayoutManager(getContext()));
+
+        // Set click listeners
+        kaidahGroupAdapter.setOnKaidahClickListener(this::onKaidahClick);
+        kaidahGroupAdapter.setOnKaidahGroupClickListener(new KaidahGroupAdapter.OnKaidahGroupClickListener() {
+            @Override
+            public void onGroupClick(KaidahGroup group) {
+                KaidahListFragment.this.onGroupClick(group);
+            }
+
+            @Override
+            public void onGroupExpand(KaidahGroup group, boolean expand) {
+                // Handle expand/collapse if needed
+            }
+        });
     }
 
     /**
@@ -117,14 +145,14 @@ public class KaidahListFragment extends Fragment {
             @Override
             public boolean onQueryTextSubmit(String query) {
                 currentSearch = query;
-                loadKaidahData();
+                updateDisplayedData();
                 return true;
             }
 
             @Override
             public boolean onQueryTextChange(String newText) {
                 currentSearch = newText;
-                loadKaidahData();
+                updateDisplayedData();
                 return true;
             }
         });
@@ -133,25 +161,20 @@ public class KaidahListFragment extends Fragment {
         cardAll.setOnClickListener(v -> {
             currentFilter = "all";
             updateFilterUI();
-            loadKaidahData();
+            updateDisplayedData();
         });
 
         cardBelum.setOnClickListener(v -> {
             currentFilter = "belum";
             updateFilterUI();
-            loadKaidahData();
+            updateDisplayedData();
         });
 
-        cardSedang.setOnClickListener(v -> {
-            currentFilter = "sedang";
-            updateFilterUI();
-            loadKaidahData();
-        });
-
+        
         cardSelesai.setOnClickListener(v -> {
             currentFilter = "selesai";
             updateFilterUI();
-            loadKaidahData();
+            updateDisplayedData();
         });
     }
 
@@ -163,7 +186,8 @@ public class KaidahListFragment extends Fragment {
 
         // Observe data changes
         viewModel.getKaidahList().observe(getViewLifecycleOwner(), kaidahList -> {
-            kaidahAdapter.updateData(kaidahList);
+            allKaidahList = kaidahList;
+            updateDisplayedData();
             hideLoading();
         });
 
@@ -185,185 +209,257 @@ public class KaidahListFragment extends Fragment {
     }
 
     /**
-     * Load kaidah data from database
+     * Update displayed data (using grouped view only)
+     */
+    private void updateDisplayedData() {
+        updateGroupedData();
+    }
+
+    /**
+     * Update grouped view data
+     */
+    private void updateGroupedData() {
+        // Apply filter to kaidah groups
+        List<KaidahGroup> filteredGroups = filterGroups(kaidahGroupList, currentFilter, currentSearch);
+        kaidahGroupAdapter.updateData(filteredGroups);
+
+        // Update empty state
+        updateEmptyState(filteredGroups.isEmpty(), "grouped");
+    }
+
+    /**
+     * Filter groups based on current filter and search
+     */
+    private List<KaidahGroup> filterGroups(List<KaidahGroup> groups, String filter, String search) {
+        if (groups == null || groups.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        List<KaidahGroup> filteredGroups = new ArrayList<>();
+
+        for (KaidahGroup group : groups) {
+            // Apply search filter to group name first
+            if (!search.isEmpty()) {
+                String searchQuery = search.toLowerCase().trim();
+                if (!group.getJudulBab().toLowerCase().contains(searchQuery) &&
+                    !group.getDeskripsiBab().toLowerCase().contains(searchQuery)) {
+                    // If group doesn't match search, check individual kaidah
+                    List<MateriKaidah> matchingKaidah = new ArrayList<>();
+                    for (MateriKaidah kaidah : group.getKaidahList()) {
+                        if (kaidah.getJudulKaidah().toLowerCase().contains(searchQuery) ||
+                            kaidah.getDeskripsi().toLowerCase().contains(searchQuery)) {
+                            matchingKaidah.add(kaidah);
+                        }
+                    }
+
+                    if (matchingKaidah.isEmpty()) {
+                        continue; // Skip this group entirely
+                    }
+
+                    // Create new group with filtered kaidah
+                    KaidahGroup filteredGroup = new KaidahGroup(
+                        group.getBab(),
+                        matchingKaidah,
+                        matchingKaidah.size(),
+                        group.getTotalSoal()
+                    );
+                    filteredGroups.add(filteredGroup);
+                } else {
+                    filteredGroups.add(group);
+                }
+            } else {
+                filteredGroups.add(group);
+            }
+        }
+
+        // Apply status filter
+        if (!filter.equals("all")) {
+            List<KaidahGroup> statusFilteredGroups = new ArrayList<>();
+            for (KaidahGroup group : filteredGroups) {
+                List<MateriKaidah> statusFilteredKaidah = filterKaidah(group.getKaidahList(), filter, "");
+                if (!statusFilteredKaidah.isEmpty()) {
+                    KaidahGroup statusFilteredGroup = new KaidahGroup(
+                        group.getBab(),
+                        statusFilteredKaidah,
+                        statusFilteredKaidah.size(),
+                        group.getTotalSoal()
+                    );
+                    statusFilteredGroups.add(statusFilteredGroup);
+                }
+            }
+            filteredGroups = statusFilteredGroups;
+        }
+
+        return filteredGroups;
+    }
+
+    /**
+     * Filter kaidah list based on current filter and search
+     */
+    private List<MateriKaidah> filterKaidah(List<MateriKaidah> kaidahList, String filter, String search) {
+        if (kaidahList == null || kaidahList.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        List<MateriKaidah> filteredList = new ArrayList<>(kaidahList);
+
+        // Apply search filter
+        if (!search.isEmpty()) {
+            String searchQuery = search.toLowerCase().trim();
+            filteredList = filteredList.stream()
+                    .filter(kaidah ->
+                        kaidah.getJudulKaidah().toLowerCase().contains(searchQuery) ||
+                        kaidah.getDeskripsi().toLowerCase().contains(searchQuery))
+                    .collect(java.util.stream.Collectors.toList());
+        }
+
+        // Apply status filter
+        switch (filter) {
+            case "belum":
+                return filteredList.stream()
+                        .filter(kaidah -> kaidah.getStatus() == null || kaidah.getStatus().equals("belum_dimulai"))
+                        .collect(java.util.stream.Collectors.toList());
+            case "sedang":
+                return filteredList.stream()
+                        .filter(kaidah -> "sedang_belajar".equals(kaidah.getStatus()))
+                        .collect(java.util.stream.Collectors.toList());
+            case "selesai":
+                return filteredList.stream()
+                        .filter(kaidah -> "selesai".equals(kaidah.getStatus()))
+                        .collect(java.util.stream.Collectors.toList());
+            default: // all
+                return filteredList;
+        }
+    }
+
+    /**
+     * Update empty state visibility
+     */
+    private void updateEmptyState(boolean isEmpty, String viewType) {
+        if (isEmpty) {
+            emptyStateLayout.setVisibility(View.VISIBLE);
+            rvKaidah.setVisibility(View.GONE);
+
+            String message;
+            if (!currentSearch.isEmpty()) {
+                message = "Tidak ada kaidah yang cocok dengan pencarian \"" + currentSearch + "\"";
+            } else {
+                switch (currentFilter) {
+                    case "belum":
+                        message = "Tidak ada kaidah yang belum dimulai";
+                        break;
+                    case "sedang":
+                        message = "Tidak ada kaidah yang sedang dipelajari";
+                        break;
+                    case "selesai":
+                        message = "Tidak ada kaidah yang sudah selesai";
+                        break;
+                    default:
+                        message = viewType.equals("grouped") ? "Tidak ada data bab" : "Tidak ada data kaidah";
+                        break;
+                }
+            }
+            tvEmptyState.setText(message);
+        } else {
+            emptyStateLayout.setVisibility(View.GONE);
+            rvKaidah.setVisibility(View.VISIBLE);
+        }
+    }
+
+    /**
+     * Load kaidah data from API
      */
     private void loadKaidahData() {
         Log.d("KAIDAH_DEBUG", "Loading kaidah data...");
         showLoading();
 
-        Executors.newSingleThreadExecutor().execute(() -> {
-            try {
-                int siswaId = sessionManager.getUserId();
-                Log.d("KAIDAH_DEBUG", "Student ID: " + siswaId);
+        try {
+            int siswaId = sessionManager.getUserId();
+            Log.d("KAIDAH_DEBUG", "Student ID: " + siswaId);
 
-                // Check if database is empty, if so sync from API first
-                int localKaidahCount = database.materiKaidahDao().getCount();
-                Log.d("KAIDAH_DEBUG", "Local kaidah count: " + localKaidahCount);
+            // Load grouped data from API
+            loadGroupedKaidahFromAPI(siswaId);
 
-                if (localKaidahCount == 0) {
-                    Log.d("KAIDAH_DEBUG", "Database empty, syncing from API...");
-                    if (isAdded() && getActivity() != null) {
-                        getActivity().runOnUiThread(() -> {
-                            syncKaidahFromAPI();
-                        });
-                    }
-                    return; // loadKaidahData will be called again after sync completes
-                }
-
-                List<MateriKaidah> kaidahList;
-
-                switch (currentFilter) {
-                    case "belum":
-                        Log.d("KAIDAH_DEBUG", "Filter: belum dimulai");
-                        kaidahList = database.materiKaidahDao().getMateriBelumDimulaiSync(siswaId);
-                        break;
-                    case "sedang":
-                        Log.d("KAIDAH_DEBUG", "Filter: sedang belajar");
-                        kaidahList = database.materiKaidahDao().getMateriSedangBelajarSync(siswaId);
-                        break;
-                    case "selesai":
-                        Log.d("KAIDAH_DEBUG", "Filter: selesai");
-                        kaidahList = database.materiKaidahDao().getMateriSelesaiSync(siswaId);
-                        break;
-                    default: // all
-                        Log.d("KAIDAH_DEBUG", "Filter: all");
-                        kaidahList = database.materiKaidahDao().getMateriWithProgressSync(siswaId);
-                        break;
-                }
-
-                Log.d("KAIDAH_DEBUG", "Total kaidah loaded: " + (kaidahList != null ? kaidahList.size() : 0));
-
-                // Apply search filter
-                if (!currentSearch.isEmpty()) {
-                    kaidahList = filterBySearch(kaidahList, currentSearch);
-                    Log.d("KAIDAH_DEBUG", "After search filter: " + kaidahList.size());
-                }
-
-                // Update UI on main thread
-                List<MateriKaidah> finalKaidahList = kaidahList;
-                if (isAdded() && getActivity() != null) {
-                    getActivity().runOnUiThread(() -> {
-                        kaidahAdapter.updateData(finalKaidahList);
-                        hideLoading();
-                        Log.d("KAIDAH_DEBUG", "UI updated successfully");
-                    });
-                }
-
-            } catch (Exception e) {
-                Log.e("KAIDAH_DEBUG", "Error loading kaidah data", e);
-                if (isAdded() && getActivity() != null) {
-                    getActivity().runOnUiThread(() -> {
-                        Toast.makeText(getContext(), "Error loading data: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                        hideLoading();
-                    });
-                }
+        } catch (Exception e) {
+            Log.e("KAIDAH_DEBUG", "Error loading kaidah data", e);
+            if (isAdded() && getActivity() != null) {
+                getActivity().runOnUiThread(() -> {
+                    Toast.makeText(getContext(), "Error loading data: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    hideLoading();
+                });
             }
-        });
+        }
     }
 
     /**
-     * Sync kaidah data from API
+     * Load grouped kaidah data from API
      */
-    private void syncKaidahFromAPI() {
-        Log.d("KAIDAH_DEBUG", "Syncing kaidah from API...");
-
+    private void loadGroupedKaidahFromAPI(int siswaId) {
         String sessionToken = sessionManager.getAuthToken();
         if (sessionToken == null || sessionToken.isEmpty()) {
             Log.e("KAIDAH_DEBUG", "No session token found");
             return;
         }
 
-        // Gunakan API method dengan wrapper yang sesuai struktur response
-        apiService.getKaidahListWithWrapper().enqueue(new Callback<KaidahListResponse>() {
+        Log.d("KAIDAH_DEBUG", "Loading grouped kaidah from API...");
+
+        // Call grouped API
+        apiService.getKaidahGrouped("Bearer " + sessionToken).enqueue(new Callback<KaidahGroupedResponse>() {
             @Override
-            public void onResponse(Call<KaidahListResponse> call, Response<KaidahListResponse> response) {
+            public void onResponse(Call<KaidahGroupedResponse> call, Response<KaidahGroupedResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    KaidahListResponse kaidahResponse = response.body();
-                    if (kaidahResponse.isSuccess() && kaidahResponse.getKaidahList() != null) {
-                        List<MateriKaidah> kaidahList = kaidahResponse.getKaidahList();
-                        Log.d("KAIDAH_DEBUG", "API returned " + kaidahList.size() + " kaidah items");
+                    KaidahGroupedResponse groupedResponse = response.body();
+                    if (groupedResponse.isSuccess() && groupedResponse.getData() != null) {
+                        kaidahGroupList = groupedResponse.getData().getGroups();
+                        Log.d("KAIDAH_DEBUG", "API returned " + kaidahGroupList.size() + " kaidah groups");
 
-                        // Save to database on background thread
+                        // Update progress from local database on background thread
                         Executors.newSingleThreadExecutor().execute(() -> {
-                            try {
-                                // Clear existing data
-                                database.materiKaidahDao().deleteAll();
+                            updateProgressFromLocalDatabase();
 
-                                // Insert new data
-                                for (MateriKaidah kaidah : kaidahList) {
-                                    // Convert API response to database entity
-                                    MateriKaidah entity = new MateriKaidah();
-
-                                    entity.setIdMateri(kaidah.getIdMateri());
-                                    entity.setJudulKaidah(kaidah.getJudulKaidah());
-                                    entity.setDeskripsi(kaidah.getDeskripsi());
-                                    entity.setPenjelasan(kaidah.getPenjelasan());
-                                    entity.setContoh(kaidah.getContoh());
-                                    entity.setUrutan(kaidah.getUrutan());
-                                    entity.setDibuatOleh(kaidah.getDibuatOleh());
-
-                                    database.materiKaidahDao().insert(entity);
-                                }
-
-                                Log.d("KAIDAH_DEBUG", "Successfully saved " + kaidahList.size() + " kaidah to database");
-
-                                // Reload data from local database
-                                if (isAdded() && getActivity() != null) {
-                                    getActivity().runOnUiThread(() -> {
-                                        loadKaidahData();
-                                    });
-                                }
-
-                            } catch (Exception e) {
-                                Log.e("KAIDAH_DEBUG", "Error saving kaidah to database", e);
-                                if (isAdded() && getActivity() != null) {
-                                    getActivity().runOnUiThread(() -> {
-                                        Toast.makeText(getContext(), "Error saving data: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                                    });
-                                }
+                            // Update UI on main thread after progress is updated
+                            if (isAdded() && getActivity() != null) {
+                                getActivity().runOnUiThread(() -> {
+                                    updateDisplayedData();
+                                    hideLoading();
+                                    Log.d("KAIDAH_DEBUG", "Grouped UI updated successfully with local progress");
+                                });
                             }
                         });
-
                     } else {
-                        Log.e("KAIDAH_DEBUG", "API response not successful: " + kaidahResponse.getMessage());
+                        Log.e("KAIDAH_DEBUG", "API response not successful: " + groupedResponse.getMessage());
                         if (isAdded() && getActivity() != null) {
-                            Toast.makeText(getContext(), kaidahResponse.getMessage(), Toast.LENGTH_SHORT).show();
+                            getActivity().runOnUiThread(() -> {
+                                Toast.makeText(getContext(), groupedResponse.getMessage(), Toast.LENGTH_SHORT).show();
+                                hideLoading();
+                            });
                         }
                     }
                 } else {
                     Log.e("KAIDAH_DEBUG", "API call failed: " + response.code());
                     if (isAdded() && getActivity() != null) {
-                        Toast.makeText(getContext(), "API Error: " + response.code(), Toast.LENGTH_SHORT).show();
+                        getActivity().runOnUiThread(() -> {
+                            Toast.makeText(getContext(), "API Error: " + response.code(), Toast.LENGTH_SHORT).show();
+                            hideLoading();
+                        });
                     }
                 }
             }
 
             @Override
-            public void onFailure(Call<KaidahListResponse> call, Throwable t) {
+            public void onFailure(Call<KaidahGroupedResponse> call, Throwable t) {
                 Log.e("KAIDAH_DEBUG", "API call failed", t);
                 if (isAdded() && getActivity() != null) {
-                    Toast.makeText(getContext(), "Network Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                    getActivity().runOnUiThread(() -> {
+                        Toast.makeText(getContext(), "Network Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                        hideLoading();
+                    });
                 }
             }
         });
     }
 
-    /**
-     * Filter kaidah by search query
-     */
-    private List<MateriKaidah> filterBySearch(List<MateriKaidah> kaidahList, String query) {
-        if (query == null || query.trim().isEmpty()) {
-            return kaidahList;
-        }
-
-        String searchQuery = query.toLowerCase().trim();
-        return kaidahList.stream()
-                .filter(kaidah ->
-                    kaidah.getJudulKaidah().toLowerCase().contains(searchQuery) ||
-                    kaidah.getDeskripsi().toLowerCase().contains(searchQuery))
-                .collect(java.util.stream.Collectors.toList());
-    }
-
+    
     /**
      * Update filter UI to reflect current selection
      */
@@ -371,16 +467,12 @@ public class KaidahListFragment extends Fragment {
         // Reset all cards
         cardAll.setStrokeWidth(0);
         cardBelum.setStrokeWidth(0);
-        cardSedang.setStrokeWidth(0);
         cardSelesai.setStrokeWidth(0);
 
         // Highlight selected filter
         switch (currentFilter) {
             case "belum":
                 cardBelum.setStrokeWidth(3);
-                break;
-            case "sedang":
-                cardSedang.setStrokeWidth(3);
                 break;
             case "selesai":
                 cardSelesai.setStrokeWidth(3);
@@ -389,6 +481,14 @@ public class KaidahListFragment extends Fragment {
                 cardAll.setStrokeWidth(3);
                 break;
         }
+    }
+
+    /**
+     * Handle group click
+     */
+    private void onGroupClick(KaidahGroup group) {
+        // Navigate to group detail or expand/collapse
+        Log.d("KAIDAH_DEBUG", "Group clicked: " + group.getJudulBab());
     }
 
     /**
@@ -409,12 +509,33 @@ public class KaidahListFragment extends Fragment {
      * Navigate to kaidah detail
      */
     private void navigateToDetail(MateriKaidah kaidah) {
-        // TODO: Navigate to KaidahDetailActivity
-        // Intent intent = new Intent(getContext(), KaidahDetailActivity.class);
-        // intent.putExtra("kaidah_id", kaidah.getIdMateri());
-        // startActivity(intent);
+        // Debug logging
+        Log.d("KAIDAH_NAVIGATION", String.format(
+            "Navigating to kaidah detail:\n" +
+            "ID Materi: %d\n" +
+            "Judul: %s\n" +
+            "Urutan: %d",
+            kaidah.getIdMateri(),
+            kaidah.getJudulKaidah(),
+            kaidah.getUrutan()
+        ));
 
-        Toast.makeText(getContext(), "Navigate to: " + kaidah.getJudulKaidah(), Toast.LENGTH_SHORT).show();
+        // Create fragment instance with kaidah ID
+        KaidahDetailFragment detailFragment = KaidahDetailFragment.newInstance(kaidah.getIdMateri());
+
+        // Navigate to detail fragment
+        if (getParentFragmentManager() != null) {
+            getParentFragmentManager().beginTransaction()
+                    .setCustomAnimations(
+                        R.anim.slide_in_right,
+                        R.anim.slide_out_left,
+                        R.anim.slide_in_left,
+                        R.anim.slide_out_right
+                    )
+                    .replace(R.id.fragment_container, detailFragment)
+                    .addToBackStack(null)
+                    .commit();
+        }
     }
 
     /**
@@ -423,6 +544,7 @@ public class KaidahListFragment extends Fragment {
     private void showLoading() {
         progressBar.setVisibility(View.VISIBLE);
         rvKaidah.setVisibility(View.GONE);
+        emptyStateLayout.setVisibility(View.GONE);
     }
 
     /**
@@ -442,12 +564,61 @@ public class KaidahListFragment extends Fragment {
         }
     }
 
+    /**
+     * Update progress information from local database
+     * This merges API data with local progress data synchronously
+     */
+    private void updateProgressFromLocalDatabase() {
+        if (kaidahGroupList == null || kaidahGroupList.isEmpty()) {
+            return;
+        }
+
+        Log.d("KAIDAH_DEBUG", "Updating progress from local database...");
+
+        try {
+            int siswaId = sessionManager.getUserId();
+            List<MateriKaidah> localMateriList = database.materiKaidahDao().getMateriWithProgressSync(siswaId);
+
+            Log.d("KAIDAH_DEBUG", "Local database has " + localMateriList.size() + " materi with progress");
+
+            // Create a map for quick lookup
+            java.util.Map<Integer, MateriKaidah> localMateriMap = new java.util.HashMap<>();
+            for (MateriKaidah localMateri : localMateriList) {
+                localMateriMap.put(localMateri.getIdMateri(), localMateri);
+            }
+
+            // Update each kaidah group with local progress data
+            int updatedCount = 0;
+            for (KaidahGroup group : kaidahGroupList) {
+                if (group.getKaidahList() != null) {
+                    for (MateriKaidah apiMateri : group.getKaidahList()) {
+                        MateriKaidah localMateri = localMateriMap.get(apiMateri.getIdMateri());
+                        if (localMateri != null) {
+                            // Update API materi with local progress data
+                            apiMateri.setProgressPercentage(localMateri.getProgressPercentage());
+                            apiMateri.setCompleted(localMateri.isCompleted());
+
+                            Log.d("KAIDAH_DEBUG", "Updated progress for materi " + apiMateri.getJudulKaidah() +
+                                  ": " + localMateri.getProgressPercentage() + "%");
+                            updatedCount++;
+                        }
+                    }
+                }
+            }
+
+            Log.d("KAIDAH_DEBUG", "Updated progress for " + updatedCount + " materi items");
+
+        } catch (Exception e) {
+            Log.e("KAIDAH_DEBUG", "Error updating progress from local database", e);
+        }
+    }
+
     @Override
     public void onDestroy() {
         super.onDestroy();
         // Clear resources
-        if (kaidahAdapter != null) {
-            kaidahAdapter = null;
+        if (kaidahGroupAdapter != null) {
+            kaidahGroupAdapter = null;
         }
     }
 }

@@ -1,92 +1,77 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="8dp"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="2dp"
-    app:cardBackgroundColor="@color/white">
+    android:orientation="horizontal"
+    android:padding="12dp"
+    android:background="?android:attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true">
 
+    <!-- Kaidah Icon -->
+    <ImageView
+        android:id="@+id/ivKaidahIcon"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_gravity="center_vertical"
+        android:layout_marginEnd="12dp"
+        android:contentDescription="Kaidah Icon"
+        android:src="@drawable/ic_circle"
+        android:tint="@color/gray_400" />
+
+    <!-- Content -->
     <LinearLayout
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="16dp">
+        android:layout_weight="1"
+        android:orientation="vertical">
 
-        <!-- Kaidah Icon -->
-        <ImageView
-            android:id="@+id/ivKaidahIcon"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginEnd="16dp"
-            android:background="@drawable/bg_kaidah_icon"
-            android:padding="12dp"
-            android:src="@drawable/ic_book"
-            android:contentDescription="Icon Kaidah" />
-
-        <!-- Kaidah Info -->
-        <LinearLayout
-            android:layout_width="0dp"
+        <!-- Judul Kaidah -->
+        <TextView
+            android:id="@+id/tvKaidahTitle"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:textStyle="normal"
+            tools:text="Pengenalan Kalam" />
 
-            <!-- Kaidah Title -->
-            <TextView
-                android:id="@+id/tvKaidahTitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Judul Kaidah"
-                android:textAppearance="@style/TextAppearance.PembelajaranKaidah.BodyLarge"
-                android:textColor="@color/text_primary"
-                android:maxLines="2"
-                android:ellipsize="end" />
+        <!-- Deskripsi -->
+        <TextView
+            android:id="@+id/tvDeskripsi"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:visibility="gone"
+            tools:text="Pengenalan dasar tentang kalam (ucapan) dalam bahasa Arab"
+            tools:visibility="visible" />
 
-            <!-- Progress Info -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:orientation="horizontal">
+        <!-- Progress -->
+        <TextView
+            android:id="@+id/tvProgress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/primary_green_dark"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            tools:text="0%" />
 
-                <TextView
-                    android:id="@+id/tvProgress"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0%"
-                    android:textAppearance="@style/TextAppearance.PembelajaranKaidah.BodyMedium"
-                    android:textColor="@color/primary_green" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:text="•"
-                    android:textAppearance="@style/TextAppearance.PembelajaranKaidah.BodyMedium"
-                    android:textColor="@color/text_hint" />
-
-                <TextView
-                    android:id="@+id/tvStatus"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:text="Belum dimulai"
-                    android:textAppearance="@style/TextAppearance.PembelajaranKaidah.BodyMedium"
-                    android:textColor="@color/text_secondary" />
-
-            </LinearLayout>
-
-        </LinearLayout>
-
-        <!-- Action Arrow -->
-        <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_arrow_right"
-            android:contentDescription="Action"
-            app:tint="@color/gray_400" />
+        <!-- Status -->
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/gray_600"
+            android:textSize="11sp"
+            tools:text="Belum Dimulai" />
 
     </LinearLayout>
 
-</androidx.cardview.widget.CardView>
+</LinearLayout>

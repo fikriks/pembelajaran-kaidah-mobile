@@ -1,4 +1,4 @@
-package com.khozin.pembelajarankaidah.ui.progress;
+package com.khozin.pembelajarankaidah.ui.history;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -14,9 +14,9 @@ import androidx.fragment.app.Fragment;
 import com.khozin.pembelajarankaidah.R;
 
 /**
- * Progress Fragment - Halaman progress pembelajaran dengan empty state universal
+ * History Fragment - Halaman riwayat pembelajaran dengan empty state universal
  */
-public class ProgressFragment extends Fragment {
+public class HistoryFragment extends Fragment {
 
     private View emptyStateLayout;
 
@@ -24,7 +24,7 @@ public class ProgressFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_progress_empty, container, false);
+        return inflater.inflate(R.layout.fragment_history_empty, container, false);
     }
 
     @Override
@@ -37,7 +37,7 @@ public class ProgressFragment extends Fragment {
     private void setupEmptyState(View rootView) {
         emptyStateLayout = rootView.findViewById(R.id.llEmptyState);
 
-        // Setup empty state for Progress
+        // Setup empty state for History
         if (emptyStateLayout != null) {
             ImageView ivIcon = emptyStateLayout.findViewById(R.id.ivEmptyIcon);
             TextView tvTitle = emptyStateLayout.findViewById(R.id.tvEmptyTitle);
@@ -45,9 +45,9 @@ public class ProgressFragment extends Fragment {
             Button btnAction = emptyStateLayout.findViewById(R.id.btnAction);
 
             ivIcon.setImageResource(R.drawable.empty_state_universal);
-            tvTitle.setText("Belum Ada Progress");
-            tvDescription.setText("Mulai belajar untuk melihat progress pembelajaran Anda di sini.");
-            btnAction.setText("Mulai Belajar");
+            tvTitle.setText("Belum Ada Riwayat");
+            tvDescription.setText("Riwayat pembelajaran Anda akan tampil di sini setelah Anda mulai berlatih.");
+            btnAction.setText("Mulai Latihan");
             btnAction.setVisibility(View.VISIBLE);
             btnAction.setOnClickListener(v -> {
                 // Navigate to Kaidah list

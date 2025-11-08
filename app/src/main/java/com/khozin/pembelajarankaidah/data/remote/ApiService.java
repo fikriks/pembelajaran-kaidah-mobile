@@ -3,10 +3,14 @@ package com.khozin.pembelajarankaidah.data.remote;
 import com.khozin.pembelajarankaidah.data.model.ApiResponse;
 import com.khozin.pembelajarankaidah.data.model.LoginResponse;
 import com.khozin.pembelajarankaidah.data.model.Siswa;
+import com.khozin.pembelajarankaidah.data.model.Bab;
 import com.khozin.pembelajarankaidah.data.model.MateriKaidah;
 import com.khozin.pembelajarankaidah.data.model.SesiLatihan;
 import com.khozin.pembelajarankaidah.data.model.RiwayatBelajar;
 import com.khozin.pembelajarankaidah.data.model.KaidahListResponse;
+import com.khozin.pembelajarankaidah.data.model.KaidahGroupedResponse;
+import com.khozin.pembelajarankaidah.data.model.BabListResponse;
+import com.khozin.pembelajarankaidah.data.model.ChapterProgressResponse;
 import com.khozin.pembelajarankaidah.network.ApiConstants;
 
 import java.util.List;
@@ -41,6 +45,24 @@ public interface ApiService {
     );
 
     // ===================
+    // BAB/CHAPTER ENDPOINTS
+    // ===================
+
+    @GET(ApiConstants.BAB_CHAPTERS)
+    Call<BabListResponse> getChapters();
+
+    @GET(ApiConstants.BAB_CHAPTER_DETAIL)
+    Call<ApiResponse<Bab>> getChapterDetail(
+            @Path("chapterCode") String chapterCode
+    );
+
+    @GET(ApiConstants.BAB_PROGRESS_OVERVIEW)
+    Call<ChapterProgressResponse> getProgressOverview();
+
+    @GET(ApiConstants.BAB_OVERALL_PROGRESS)
+    Call<ApiResponse<Map<String, Object>>> getOverallProgress();
+
+    // ===================
     // KAIDAH/MATERI
     // ===================
 
@@ -53,6 +75,14 @@ public interface ApiService {
      */
     @GET(ApiConstants.KAIDAH_LIST)
     Call<KaidahListResponse> getKaidahListWithWrapper();
+
+    /**
+     * Get kaidah grouped by bab
+     */
+    @GET(ApiConstants.KAIDAH_GROUPED)
+    Call<KaidahGroupedResponse> getKaidahGrouped(
+            @Header("Authorization") String sessionToken
+    );
 
     @GET(ApiConstants.KAIDAH_DETAIL)
     Call<ApiResponse<MateriKaidah>> getKaidahDetail(

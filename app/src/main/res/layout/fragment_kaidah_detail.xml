@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/scrollView"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_primary"
+    android:padding="16dp"
+    tools:context=".ui.kaidah.KaidahDetailFragment">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Header with back button -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:id="@+id/btnBack"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_arrow_left"
+                android:background="?attr/selectableItemBackground"
+                android:padding="12dp"
+                android:contentDescription="Kembali"
+                android:tint="@color/primary_green" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="16dp"
+                android:text="Detail Kaidah"
+                android:textAppearance="@style/TextAppearance.PembelajaranKaidah.HeadlineMedium"
+                android:textColor="@color/text_primary" />
+
+        </LinearLayout>
+
+        <!-- Judul Kaidah Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="2dp"
+            app:cardBackgroundColor="@color/white">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <!-- Judul -->
+                <TextView
+                    android:id="@+id/tvJudulKaidah"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Judul Kaidah"
+                    android:textAppearance="@style/TextAppearance.PembelajaranKaidah.HeadlineLarge"
+                    android:textColor="@color/primary_green"
+                    android:textStyle="bold" />
+
+                <!-- Deskripsi -->
+                <TextView
+                    android:id="@+id/tvDeskripsi"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Deskripsi kaidah"
+                    android:textAppearance="@style/TextAppearance.PembelajaranKaidah.BodyMedium"
+                    android:textColor="@color/text_secondary" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+  
+        <!-- Penjelasan Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardPenjelasan"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            app:cardBackgroundColor="@color/white">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Penjelasan"
+                    android:textAppearance="@style/TextAppearance.PembelajaranKaidah.LabelLarge"
+                    android:textColor="@color/text_primary" />
+
+                <TextView
+                    android:id="@+id/tvPenjelasan"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Isim mufrad adalah kata tunggal yang menunjuk satu benda atau orang. Isim jamak adalah kata yang menunjuk lebih dari satu benda atau orang."
+                    android:textAppearance="@style/TextAppearance.PembelajaranKaidah.BodyMedium"
+                    android:textColor="@color/text_primary" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Contoh Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardContoh"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            app:cardBackgroundColor="@color/white">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Contoh"
+                    android:textAppearance="@style/TextAppearance.PembelajaranKaidah.LabelLarge"
+                    android:textColor="@color/text_primary" />
+
+                <TextView
+                    android:id="@+id/tvContoh"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="كِتَابٌ (kitabun) - satu buku\nكُتُبٌ (kutubun) - banyak buku"
+                    android:textAppearance="@style/TextAppearance.PembelajaranKaidah.BodyMedium"
+                    android:textColor="@color/text_primary"
+                    android:textColorLink="@color/primary_green"
+                    android:fontFamily="serif"
+                    android:textSize="16sp" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Navigation Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="2">
+
+            <!-- Materi Sebelumnya Button -->
+            <Button
+                android:id="@+id/btnPreviousMateri"
+                style="@style/Widget.PembelajaranKaidah.Button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:text="Materi Sebelumnya"
+                android:textSize="12sp"
+                android:textColor="@android:color/white"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:minHeight="48dp"
+                android:drawableStart="@drawable/ic_chevron_left"
+                android:drawablePadding="8dp"
+                android:gravity="center"
+                android:backgroundTint="@color/primary_green" />
+
+            <!-- Materi Selanjutnya Button -->
+            <Button
+                android:id="@+id/btnNextMateri"
+                style="@style/Widget.PembelajaranKaidah.Button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="Materi Selanjutnya"
+                android:textSize="12sp"
+                android:textColor="@android:color/white"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:minHeight="48dp"
+                android:drawableEnd="@drawable/ic_chevron_right"
+                android:drawablePadding="8dp"
+                android:gravity="center"
+                android:backgroundTint="@color/primary_green" />
+
+        </LinearLayout>
+
+        <!-- Progress Info -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/tvCurrentMateriInfo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Materi 1 dari 10"
+                android:textAppearance="@style/TextAppearance.PembelajaranKaidah.BodySmall"
+                android:textColor="@color/text_secondary" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.core.widget.NestedScrollView>
