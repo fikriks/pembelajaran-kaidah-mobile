@@ -13,7 +13,7 @@ import com.google.gson.annotations.SerializedName;
  * Sesuai database schema di CLAUDE.md
  */
 @Entity(tableName = "bab")
-public class Bab {
+public class Bab implements java.io.Serializable {
 
     @PrimaryKey(autoGenerate = true)
     @ColumnInfo(name = "id_bab")

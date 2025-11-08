@@ -7,13 +7,14 @@ import androidx.room.Ignore;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.google.gson.annotations.SerializedName;
+import java.io.Serializable;
 
 /**
  * Entity MateriKaidah untuk tabel materi_kaidah
  * Sesuai database schema di CLAUDE.md
  */
 @Entity(tableName = "materi_kaidah")
-public class MateriKaidah {
+public class MateriKaidah implements Serializable {
 
     @PrimaryKey(autoGenerate = true)
     @ColumnInfo(name = "id_materi")

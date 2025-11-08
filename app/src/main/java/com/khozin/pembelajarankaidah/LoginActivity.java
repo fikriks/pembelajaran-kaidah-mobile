@@ -20,6 +20,11 @@ import com.google.android.material.progressindicator.CircularProgressIndicator;
 import com.khozin.pembelajarankaidah.data.model.LoginResponse;
 import com.khozin.pembelajarankaidah.data.repository.LoginRepository;
 import com.khozin.pembelajarankaidah.utils.SessionManager;
+import com.khozin.pembelajarankaidah.database.AppDatabase;
+import com.khozin.pembelajarankaidah.data.model.Siswa;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Login Activity dengan API integration lengkap
@@ -37,14 +42,18 @@ public class LoginActivity extends AppCompatActivity {
 
     // Business Logic
     private LoginRepository loginRepository;
+    private SessionManager sessionManager;
+    private ExecutorService executorService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        // Initialize repository
+        // Initialize repository and session manager
         loginRepository = new LoginRepository(this);
+        sessionManager = new SessionManager(this);
+        executorService = Executors.newSingleThreadExecutor();
 
         // Check jika sudah login
         if (loginRepository.isLoggedIn()) {
@@ -137,6 +146,9 @@ public class LoginActivity extends AppCompatActivity {
             public void onSuccess(LoginResponse loginResponse) {
                 Log.d("LOGIN_DEBUG", "SUCCESS: Login callback triggered");
                 Log.d("LOGIN_DEBUG", "User: " + loginResponse.getUserDisplayName());
+
+                // Save siswa data to Room Database in background
+                saveSiswaToDatabase(loginResponse.getSiswa());
 
                 setViewState(true);
                 showToast("Login berhasil! Selamat datang, " + loginResponse.getUserDisplayName());
@@ -320,9 +332,57 @@ public class LoginActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Save siswa data to Room Database
+     */
+    private void saveSiswaToDatabase(Siswa siswa) {
+        if (siswa == null) {
+            Log.w("LoginActivity", "Siswa data is null, skipping database save");
+            return;
+        }
+
+        executorService.execute(() -> {
+            try {
+                Log.d("LoginActivity", "Saving siswa to Room Database: " + siswa.getNamaLengkap());
+
+                // Check if siswa already exists
+                AppDatabase database = AppDatabase.getDatabase(LoginActivity.this);
+                Siswa existingSiswa = database.siswaDao().getById(siswa.getId());
+
+                if (existingSiswa != null) {
+                    // Update existing siswa
+                    Log.d("LoginActivity", "Updating existing siswa in database");
+                    // Update fields that might have changed
+                    existingSiswa.setNis(siswa.getNis());
+                    existingSiswa.setNamaLengkap(siswa.getNamaLengkap());
+                    existingSiswa.setJenisKelamin(siswa.getJenisKelamin());
+                    existingSiswa.setKelas(siswa.getKelas());
+                    existingSiswa.setKataSandi(siswa.getKataSandi());
+                    existingSiswa.setStatus(siswa.getStatus());
+                    existingSiswa.setWaktuDiubah(siswa.getWaktuDiubah());
+                    database.siswaDao().update(existingSiswa);
+                } else {
+                    // Insert new siswa
+                    Log.d("LoginActivity", "Inserting new siswa to database");
+                    long insertResult = database.siswaDao().insert(siswa);
+                    Log.d("LoginActivity", "Siswa inserted with ID: " + insertResult);
+                }
+
+                Log.d("LoginActivity", "Siswa data saved to Room Database successfully");
+
+            } catch (Exception e) {
+                Log.e("LoginActivity", "Error saving siswa to Room Database: " + e.getMessage(), e);
+                // Don't show error to user, just log it since login was successful
+            }
+        });
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        // Clean up resources jika perlu
+        // Clean up resources
+        if (executorService != null && !executorService.isShutdown()) {
+            executorService.shutdown();
+        }
     }
 }

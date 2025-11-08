@@ -19,12 +19,14 @@ import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.khozin.pembelajarankaidah.R;
 import com.khozin.pembelajarankaidah.data.model.MateriKaidah;
+import com.khozin.pembelajarankaidah.data.model.Bab;
 import com.khozin.pembelajarankaidah.data.model.RiwayatBelajar;
 import com.khozin.pembelajarankaidah.data.model.KaidahListResponse;
 import com.khozin.pembelajarankaidah.database.AppDatabase;
 import com.khozin.pembelajarankaidah.utils.SessionManager;
 import com.khozin.pembelajarankaidah.data.remote.ApiService;
 import com.khozin.pembelajarankaidah.network.RetrofitClient;
+import com.khozin.pembelajarankaidah.utils.BabProgressHelper;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -33,7 +35,7 @@ import retrofit2.Response;
  * Fragment untuk menampilkan detail materi kaidah
  * Menampilkan penjelasan, contoh, dan tombol untuk memulai latihan
  */
-public class KaidahDetailFragment extends Fragment {
+public class KaidahDetailFragment extends Fragment implements BabCongratsFragment.KaidahNavigationListener {
 
     // UI Components
     private TextView tvJudulKaidah;
@@ -51,6 +53,7 @@ public class KaidahDetailFragment extends Fragment {
     private AppDatabase database;
     private SessionManager sessionManager;
     private ApiService apiService;
+    private BabProgressHelper babProgressHelper;
     private MateriKaidah currentKaidah;
     private List<MateriKaidah> allKaidahList;
     private int currentKaidahIndex = 0;
@@ -125,6 +128,7 @@ public class KaidahDetailFragment extends Fragment {
         sessionManager = new SessionManager(requireContext());
         database = AppDatabase.getDatabase(requireContext());
         apiService = RetrofitClient.getInstance().getRetrofit().create(ApiService.class);
+        babProgressHelper = new BabProgressHelper(requireContext());
     }
 
     /**
@@ -133,8 +137,8 @@ public class KaidahDetailFragment extends Fragment {
     private void setupListeners() {
         btnBack.setOnClickListener(v -> {
             // Go back to kaidah list
-            if (getFragmentManager() != null) {
-                getFragmentManager().popBackStack();
+            if (getActivity() != null) {
+                getActivity().getSupportFragmentManager().popBackStack();
             }
         });
 
@@ -318,15 +322,38 @@ public class KaidahDetailFragment extends Fragment {
      * Update navigation info
      */
     private void updateNavigationInfo() {
-        if (allKaidahList != null && allKaidahList.size() > 0) {
-            // Update current materi info
-            int currentPosition = currentKaidahIndex + 1;
-            int totalMateri = allKaidahList.size();
-            tvCurrentMateriInfo.setText("Materi " + currentPosition + " dari " + totalMateri);
+        if (allKaidahList != null && allKaidahList.size() > 0 && currentKaidah != null) {
+            // Get all materi in current bab
+            List<MateriKaidah> materiInCurrentBab = new ArrayList<>();
+            int currentMateriPositionInBab = 0;
+
+            for (int i = 0; i < allKaidahList.size(); i++) {
+                MateriKaidah materi = allKaidahList.get(i);
+                if (materi.getIdBab() == currentKaidah.getIdBab()) {
+                    materiInCurrentBab.add(materi);
+                    // Find position of current materi in this bab
+                    if (materi.getIdMateri() == currentKaidah.getIdMateri()) {
+                        currentMateriPositionInBab = materiInCurrentBab.size();
+                    }
+                }
+            }
+
+            // Update current materi info based on bab
+            if (!materiInCurrentBab.isEmpty()) {
+                int currentPosition = currentMateriPositionInBab;
+                int totalMateriInBab = materiInCurrentBab.size();
+                tvCurrentMateriInfo.setText("Materi " + currentPosition + " dari " + totalMateriInBab + " (Bab " + currentKaidah.getIdBab() + ")");
+            } else {
+                // Fallback to original logic if no materi found in bab
+                int currentPosition = currentKaidahIndex + 1;
+                int totalMateri = allKaidahList.size();
+                tvCurrentMateriInfo.setText("Materi " + currentPosition + " dari " + totalMateri);
+            }
 
             // Update previous button state
-            if (currentKaidahIndex <= 0) {
-                // First materi, disable previous button
+            MateriKaidah previousMateri = getPreviousMateriInSameBab();
+            if (previousMateri == null) {
+                // First materi in bab, disable previous button
                 btnPreviousMateri.setEnabled(false);
                 btnPreviousMateri.setAlpha(0.5f);
                 btnPreviousMateri.setOnClickListener(null);
@@ -365,14 +392,22 @@ public class KaidahDetailFragment extends Fragment {
         android.util.Log.d("KaidahDetail", "Current kaidah: " + (currentKaidah != null ? currentKaidah.getJudulKaidah() : "null"));
         android.util.Log.d("KaidahDetail", "Is logged in: " + sessionManager.isLoggedIn());
 
-        if (allKaidahList != null && currentKaidahIndex < allKaidahList.size() - 1) {
+        // Get next materi in the same bab
+        MateriKaidah nextKaidah = getNextMateriInSameBab();
+
+        if (nextKaidah != null) {
             // Mark current materi as completed before moving to next
             android.util.Log.d("KaidahDetail", "Calling markCurrentMateriAsCompleted() for materi: " + currentKaidah.getJudulKaidah());
             markCurrentMateriAsCompleted();
 
-            // Move to next materi
-            currentKaidahIndex++;
-            MateriKaidah nextKaidah = allKaidahList.get(currentKaidahIndex);
+            // Update current index and kaidah
+            for (int i = 0; i < allKaidahList.size(); i++) {
+                if (allKaidahList.get(i).getIdMateri() == nextKaidah.getIdMateri()) {
+                    currentKaidahIndex = i;
+                    currentKaidah = nextKaidah;
+                    break;
+                }
+            }
 
             // Load next kaidah data
             bindData(nextKaidah);
@@ -386,15 +421,12 @@ public class KaidahDetailFragment extends Fragment {
                 });
             }
         } else {
-            // Last materi - mark as completed and show completion message
+            // Last materi - mark as completed and check if bab is completed
             android.util.Log.d("KaidahDetail", "Last materi reached. Calling markCurrentMateriAsCompleted()");
             markCurrentMateriAsCompleted();
 
-            if (getFragmentManager() != null) {
-                getFragmentManager().popBackStack();
-            }
-            Toast.makeText(getContext(), "Selamat! Anda telah menyelesaikan semua materi.",
-                    Toast.LENGTH_LONG).show();
+            // Check if current bab is completed
+            checkBabCompletionAndShowCongrats();
         }
     }
 
@@ -402,15 +434,20 @@ public class KaidahDetailFragment extends Fragment {
      * Navigate to previous materi
      */
     private void navigateToPreviousMateri() {
-        if (allKaidahList != null && currentKaidahIndex > 0) {
-            // Move to previous materi
-            currentKaidahIndex--;
-            MateriKaidah previousKaidah = allKaidahList.get(currentKaidahIndex);
+        MateriKaidah previousKaidah = getPreviousMateriInSameBab();
+        if (previousKaidah != null) {
+            // Update current index and kaidah
+            for (int i = 0; i < allKaidahList.size(); i++) {
+                if (allKaidahList.get(i).getIdMateri() == previousKaidah.getIdMateri()) {
+                    currentKaidahIndex = i;
+                    currentKaidah = previousKaidah;
+                    break;
+                }
+            }
 
             // Load previous kaidah data
             bindData(previousKaidah);
 
-  
             // Scroll to top
             if (getView() != null) {
                 getView().post(() -> {
@@ -418,6 +455,218 @@ public class KaidahDetailFragment extends Fragment {
                             .smoothScrollTo(0, 0);
                 });
             }
+        }
+    }
+
+    /**
+     * Get previous materi in the same bab
+     */
+    private MateriKaidah getPreviousMateriInSameBab() {
+        if (currentKaidah == null || allKaidahList == null) {
+            return null;
+        }
+
+        // Find current position in bab
+        List<MateriKaidah> materiInBab = getMateriInBab(currentKaidah.getIdBab());
+        int currentPosition = -1;
+
+        for (int i = 0; i < materiInBab.size(); i++) {
+            if (materiInBab.get(i).getIdMateri() == currentKaidah.getIdMateri()) {
+                currentPosition = i;
+                break;
+            }
+        }
+
+        // Return previous materi if exists
+        if (currentPosition > 0) {
+            return materiInBab.get(currentPosition - 1);
+        }
+
+        return null;
+    }
+
+    /**
+     * Get next materi in the same bab
+     */
+    private MateriKaidah getNextMateriInSameBab() {
+        if (currentKaidah == null || allKaidahList == null) {
+            return null;
+        }
+
+        // Find current position in bab
+        List<MateriKaidah> materiInBab = getMateriInBab(currentKaidah.getIdBab());
+        int currentPosition = -1;
+
+        for (int i = 0; i < materiInBab.size(); i++) {
+            if (materiInBab.get(i).getIdMateri() == currentKaidah.getIdMateri()) {
+                currentPosition = i;
+                break;
+            }
+        }
+
+        // Return next materi if exists
+        if (currentPosition >= 0 && currentPosition < materiInBab.size() - 1) {
+            return materiInBab.get(currentPosition + 1);
+        }
+
+        return null;
+    }
+
+    /**
+     * Get all materi in a specific bab
+     */
+    private List<MateriKaidah> getMateriInBab(int babId) {
+        List<MateriKaidah> materiInBab = new ArrayList<>();
+        if (allKaidahList != null) {
+            for (MateriKaidah materi : allKaidahList) {
+                if (materi.getIdBab() == babId) {
+                    materiInBab.add(materi);
+                }
+            }
+        }
+        return materiInBab;
+    }
+
+    /**
+     * Check if current bab is completed and show congratulations screen
+     */
+    private void checkBabCompletionAndShowCongrats() {
+        if (currentKaidah == null || allKaidahList == null) {
+            return;
+        }
+
+        // Get all materi in current bab
+        List<MateriKaidah> materiInBab = new ArrayList<>();
+        for (MateriKaidah materi : allKaidahList) {
+            if (materi.getIdBab() == currentKaidah.getIdBab()) {
+                materiInBab.add(materi);
+            }
+        }
+
+        if (materiInBab.isEmpty()) {
+            return;
+        }
+
+        // Check completion using BabProgressHelper
+        babProgressHelper.checkBabCompletion(
+            currentKaidah.getIdBab(),
+            materiInBab,
+            new BabProgressHelper.BabCompletionCallback() {
+                @Override
+                public void onProgressChecked(int babId, int totalMateri, int completedMateri,
+                                              float completionPercentage, boolean isCompleted) {
+                    if (isCompleted) {
+                        // Get next bab for navigation
+                        MateriKaidah nextBab = babProgressHelper.getNextBab(allKaidahList, currentKaidah);
+
+                        // Show congratulations fragment
+                        showCongratulationsFragment(currentKaidah, nextBab, completedMateri, totalMateri);
+                    } else {
+                        // Bab not completed yet, show simple toast
+                        if (isAdded() && getContext() != null) {
+                            Toast.makeText(getContext(), "Selamat! Anda telah menyelesaikan materi ini.",
+                                    Toast.LENGTH_SHORT).show();
+                        }
+
+                        // Go back to list
+                        if (getActivity() != null) {
+                            getActivity().getSupportFragmentManager().popBackStack();
+                        }
+                    }
+                }
+
+                @Override
+                public void onError(String errorMessage) {
+                    android.util.Log.e("KaidahDetail", "Error checking bab completion: " + errorMessage);
+                    // Fallback to simple toast on main thread
+                    if (isAdded() && getActivity() != null) {
+                        getActivity().runOnUiThread(() -> {
+                            Toast.makeText(getActivity(), "Selamat! Anda telah menyelesaikan materi ini.",
+                                    Toast.LENGTH_SHORT).show();
+                        });
+                    }
+
+                    // Go back to list
+                    if (getFragmentManager() != null) {
+                        getFragmentManager().popBackStack();
+                    }
+                }
+            }
+        );
+    }
+
+    /**
+     * Show congratulations fragment
+     */
+    private void showCongratulationsFragment(MateriKaidah currentMateri, MateriKaidah nextMateri,
+                                             int completedMateri, int totalMateri) {
+        try {
+            // Convert MateriKaidah to Bab objects
+            Bab currentBab = getBabFromMateri(currentMateri);
+            Bab nextBab = getBabFromMateri(nextMateri);
+
+            BabCongratsFragment congratsFragment = BabCongratsFragment.newInstance(currentBab, nextBab);
+
+            if (getActivity() != null) {
+                getActivity().getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(android.R.id.content, congratsFragment)
+                    .addToBackStack(null)
+                    .commit();
+            }
+        } catch (Exception e) {
+            android.util.Log.e("KaidahDetail", "Error showing congratulations fragment: " + e.getMessage());
+            // Fallback to simple toast
+            if (isAdded() && getContext() != null) {
+                Toast.makeText(getContext(), "Selamat! Bab telah selesai.",
+                        Toast.LENGTH_LONG).show();
+            }
+
+            // Go back to list
+            if (getActivity() != null) {
+                getActivity().getSupportFragmentManager().popBackStack();
+            }
+        }
+    }
+
+    /**
+     * Convert MateriKaidah to Bab by getting the Bab object from database
+     */
+    private Bab getBabFromMateri(MateriKaidah materi) {
+        if (materi == null || database == null) {
+            return null;
+        }
+
+        try {
+            // Get Bab from database using id_bab from MateriKaidah
+            return database.babDao().getBabById(materi.getIdBab());
+        } catch (Exception e) {
+            android.util.Log.e("KaidahDetail", "Error getting Bab from Materi: " + e.getMessage());
+            return null;
+        }
+    }
+
+    // KaidahNavigationListener interface implementation
+
+    @Override
+    public void navigateToBabList() {
+        // Clear back stack and go to main list
+        if (getActivity() != null) {
+            getActivity().getSupportFragmentManager()
+                .popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE);
+        }
+    }
+
+    @Override
+    public void navigateToNextBab(Bab nextBab) {
+        if (nextBab != null && getActivity() != null) {
+            android.util.Log.d("KaidahDetail", "Navigating to next bab: " + nextBab.getNamaBab());
+
+            // Navigate to KaidahListFragment first to refresh the list
+            // Then the user can click on the next bab from the list
+            navigateToBabList();
+        } else {
+            android.util.Log.e("KaidahDetail", "Cannot navigate - nextBab is null or activity is null");
         }
     }
 
@@ -585,6 +834,31 @@ public class KaidahDetailFragment extends Fragment {
                     return;
                 }
 
+                // Verify siswa exists in database before proceeding
+                com.khozin.pembelajarankaidah.data.model.Siswa siswa = database.siswaDao().getById(siswaId);
+                if (siswa == null) {
+                    android.util.Log.w("KaidahDetail", "Siswa with ID " + siswaId + " not found in database. Attempting to create from session data.");
+
+                    // Try to create siswa from session data
+                    siswa = createSiswaFromSessionData(siswaId);
+                    if (siswa == null) {
+                        android.util.Log.e("KaidahDetail", "Failed to create siswa record. Cannot save riwayat belajar.");
+                        android.util.Log.e("KaidahDetail", "This might indicate a login/session issue or database sync problem.");
+
+                        // Show error message to user
+                        if (isAdded() && getActivity() != null) {
+                            getActivity().runOnUiThread(() -> {
+                                Toast.makeText(getContext(), "Error: Data siswa tidak ditemukan. Silakan login kembali.", Toast.LENGTH_LONG).show();
+                            });
+                        }
+                        return;
+                    } else {
+                        android.util.Log.d("KaidahDetail", "Successfully created siswa record from session data: " + siswa.getNamaLengkap());
+                    }
+                }
+
+                android.util.Log.d("KaidahDetail", "Siswa found: " + siswa.getNamaLengkap() + " (ID: " + siswaId + ")");
+
                 // 1. Update materi progress
                 int result = database.materiKaidahDao().updateProgress(currentMateriId, 0, 100, true);
                 android.util.Log.d("KaidahDetail", "Materi progress updated to database, result: " + result);
@@ -736,6 +1010,91 @@ public class KaidahDetailFragment extends Fragment {
                 }
             }
         });
+    }
+
+    /**
+     * Create siswa record from session data if it doesn't exist in database
+     */
+    private com.khozin.pembelajarankaidah.data.model.Siswa createSiswaFromSessionData(int siswaId) {
+        try {
+            android.util.Log.d("KaidahDetail", "=== CREATE SISWA FROM SESSION DEBUG START ===");
+            android.util.Log.d("KaidahDetail", "Attempting to create siswa record from session data for ID: " + siswaId);
+
+            // Debug: Check if session manager is logged in
+            android.util.Log.d("KaidahDetail", "SessionManager.isLoggedIn(): " + sessionManager.isLoggedIn());
+            android.util.Log.d("KaidahDetail", "SessionManager.getUserId(): " + sessionManager.getUserId());
+            android.util.Log.d("KaidahDetail", "SessionManager.getUserName(): " + sessionManager.getUserName());
+
+            // Get siswa data from session
+            com.khozin.pembelajarankaidah.data.model.Siswa sessionSiswa = sessionManager.getUserData();
+            if (sessionSiswa == null) {
+                android.util.Log.e("KaidahDetail", "No siswa data found in session");
+
+                // Try to create siswa from basic session info
+                android.util.Log.d("KaidahDetail", "Trying to create siswa from basic session info...");
+                sessionSiswa = new com.khozin.pembelajarankaidah.data.model.Siswa();
+                sessionSiswa.setId(siswaId);
+                sessionSiswa.setNis(sessionManager.getUserNis());
+                sessionSiswa.setNamaLengkap(sessionManager.getUserName());
+                sessionSiswa.setKelas(sessionManager.getUserClass());
+                sessionSiswa.setStatus("AKTIF");
+                sessionSiswa.setWaktuDibuat(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date()));
+                sessionSiswa.setWaktuDiubah(sessionSiswa.getWaktuDibuat());
+
+                android.util.Log.d("KaidahDetail", "Created siswa from basic session: " + sessionSiswa.getNamaLengkap());
+            } else {
+                android.util.Log.d("KaidahDetail", "Found siswa in session: " + sessionSiswa.getNamaLengkap());
+            }
+
+            android.util.Log.d("KaidahDetail", "Session siswa data: " + sessionSiswa.getNamaLengkap() +
+                              " (ID: " + sessionSiswa.getId() + ", NIS: " + sessionSiswa.getNis() + ")");
+
+            // Verify the ID matches
+            if (sessionSiswa.getId() != siswaId) {
+                android.util.Log.e("KaidahDetail", "Session siswa ID (" + sessionSiswa.getId() +
+                                  ") doesn't match requested ID (" + siswaId + ")");
+                return null;
+            }
+
+            // Create new siswa record for database
+            com.khozin.pembelajarankaidah.data.model.Siswa newSiswa = new com.khozin.pembelajarankaidah.data.model.Siswa();
+            newSiswa.setId(sessionSiswa.getId());
+            newSiswa.setNis(sessionSiswa.getNis());
+            newSiswa.setNamaLengkap(sessionSiswa.getNamaLengkap());
+            newSiswa.setJenisKelamin(sessionSiswa.getJenisKelamin());
+            newSiswa.setKelas(sessionSiswa.getKelas());
+
+            // Handle password field - ensure it's not NULL
+            String password = sessionSiswa.getKataSandi();
+            if (password == null || password.trim().isEmpty()) {
+                // Generate default password if not available
+                password = "default123";
+                android.util.Log.d("KaidahDetail", "Using default password for siswa (NULL/empty)");
+            }
+            newSiswa.setKataSandi(password);
+
+            newSiswa.setStatus(sessionSiswa.getStatus());
+            newSiswa.setWaktuDibuat(sessionSiswa.getWaktuDibuat());
+            newSiswa.setWaktuDiubah(sessionSiswa.getWaktuDiubah());
+
+            // Insert into database
+            long insertResult = database.siswaDao().insert(newSiswa);
+            android.util.Log.d("KaidahDetail", "Siswa record inserted with result: " + insertResult);
+
+            // Verify the insertion
+            com.khozin.pembelajarankaidah.data.model.Siswa insertedSiswa = database.siswaDao().getById(siswaId);
+            if (insertedSiswa != null) {
+                android.util.Log.d("KaidahDetail", "Siswa record successfully created and verified: " + insertedSiswa.getNamaLengkap());
+                return insertedSiswa;
+            } else {
+                android.util.Log.e("KaidahDetail", "Failed to verify inserted siswa record");
+                return null;
+            }
+
+        } catch (Exception e) {
+            android.util.Log.e("KaidahDetail", "Error creating siswa from session data: " + e.getMessage(), e);
+            return null;
+        }
     }
 
 }

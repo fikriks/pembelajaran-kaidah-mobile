@@ -102,6 +102,12 @@ public interface RiwayatBelajarDao {
     LiveData<RiwayatBelajar> getBySiswaAndMateri(int siswaId, int materiId);
 
     /**
+     * Get riwayat belajar by siswa dan materi (sync)
+     */
+    @Query("SELECT * FROM riwayat_belajar WHERE id_siswa = :siswaId AND id_materi = :materiId ORDER BY waktu_diubah DESC LIMIT 1")
+    RiwayatBelajar getBySiswaAndMateriSync(int siswaId, int materiId);
+
+    /**
      * Get riwayat belajar terakhir untuk siswa dan materi
      */
     @Query("SELECT * FROM riwayat_belajar WHERE id_siswa = :siswaId AND id_materi = :materiId ORDER BY waktu_diubah DESC LIMIT 1")
