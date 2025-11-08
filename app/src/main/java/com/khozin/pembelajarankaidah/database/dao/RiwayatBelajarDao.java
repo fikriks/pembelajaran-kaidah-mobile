@@ -6,9 +6,13 @@ import androidx.room.Delete;
 import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
+import androidx.room.RoomWarnings;
 import androidx.room.Update;
 
 import com.khozin.pembelajarankaidah.data.model.RiwayatBelajar;
+import com.khozin.pembelajarankaidah.database.entity.RiwayatBelajarStatistics;
+import com.khozin.pembelajarankaidah.database.entity.MateriBelumDimulai;
+import com.khozin.pembelajarankaidah.database.entity.LearningStreak;
 
 import java.util.List;
 
@@ -66,6 +70,12 @@ public interface RiwayatBelajarDao {
      */
     @Query("SELECT * FROM riwayat_belajar ORDER BY waktu_diubah DESC")
     List<RiwayatBelajar> getAllRiwayatSync();
+
+    /**
+     * Count riwayat belajar by status
+     */
+    @Query("SELECT COUNT(*) FROM riwayat_belajar WHERE status = :status")
+    int countByStatus(String status);
 
     /**
      * Get riwayat belajar by siswa ID
@@ -274,7 +284,8 @@ public interface RiwayatBelajarDao {
     /**
      * Get riwayat belajar dengan materi info
      */
-    @Query("SELECT rb.*, mk.judul_kaidah, mk.tingkat_kesulitan " +
+    @SuppressWarnings(RoomWarnings.CURSOR_MISMATCH)
+    @Query("SELECT rb.*, mk.judul_kaidah " +
             "FROM riwayat_belajar rb " +
             "INNER JOIN materi_kaidah mk ON rb.id_materi = mk.id_materi " +
             "WHERE rb.id_siswa = :siswaId ORDER BY rb.waktu_diubah DESC")
@@ -291,11 +302,12 @@ public interface RiwayatBelajarDao {
             "SUM(total_sesi_diikuti) as total_sesi, " +
             "AVG(rata_rata_skor) as rata_rata_skor " +
             "FROM riwayat_belajar WHERE id_siswa = :siswaId")
-    Object[] getStatisticsBySiswa(int siswaId);
+    RiwayatBelajarStatistics getStatisticsBySiswa(int siswaId);
 
     /**
      * Get riwayat belajar dengan performa metrics
      */
+    @SuppressWarnings(RoomWarnings.CURSOR_MISMATCH)
     @Query("SELECT " +
             "rb.*, " +
             "CASE WHEN rb.persentase_penguasaan >= 90 THEN 'A' " +
@@ -312,19 +324,19 @@ public interface RiwayatBelajarDao {
     /**
      * Get materi yang belum dimulai untuk siswa
      */
-    @Query("SELECT mk.id_materi, mk.judul_kaidah, mk.tingkat_kesulitan " +
+    @Query("SELECT mk.id_materi, mk.judul_kaidah, mk.urutan " +
             "FROM materi_kaidah mk " +
             "LEFT JOIN riwayat_belajar rb ON mk.id_materi = rb.id_materi AND rb.id_siswa = :siswaId " +
             "WHERE rb.id_riwayat IS NULL OR rb.status = 'belum_dimulai' " +
             "ORDER BY mk.urutan ASC")
-    List<Object[]> getMateriBelumDimulai(int siswaId);
+    List<MateriBelumDimulai> getMateriBelumDimulai(int siswaId);
 
     /**
      * Get learning streak untuk siswa
      */
     @Query("SELECT MAX(streak_hari) as max_streak, COUNT(CASE WHEN streak_hari > 0 THEN 1 END) as total_learning_days " +
             "FROM riwayat_belajar WHERE id_siswa = :siswaId")
-    Object[] getLearningStreak(int siswaId);
+    LearningStreak getLearningStreak(int siswaId);
 
     /**
      * Batch insert dengan progress tracking
@@ -378,6 +390,7 @@ public interface RiwayatBelajarDao {
     /**
      * Get riwayat dengan last activity
      */
+    @SuppressWarnings(RoomWarnings.CURSOR_MISMATCH)
     @Query("SELECT rb.*, " +
             "sl.waktu_mulai as last_activity " +
             "FROM riwayat_belajar rb " +

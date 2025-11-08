@@ -47,7 +47,7 @@ public class JawabanAdapter extends RecyclerView.Adapter<JawabanAdapter.ViewHold
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Jawaban jawaban = jawabanList.get(position);
-        holder.bind(jawaban, selectedJawabanId);
+        holder.bind(jawaban, selectedJawabanId, listener);
     }
 
     @Override
@@ -65,7 +65,7 @@ public class JawabanAdapter extends RecyclerView.Adapter<JawabanAdapter.ViewHold
         return jawabanList.get(position);
     }
 
-    static class ViewHolder extends RecyclerView.ViewHolder {
+    class ViewHolder extends RecyclerView.ViewHolder {
         private MaterialCardView cardJawaban;
         private TextView tvOptionLetter;
         private TextView tvJawaban;
@@ -81,7 +81,7 @@ public class JawabanAdapter extends RecyclerView.Adapter<JawabanAdapter.ViewHold
             rootView = itemView;
         }
 
-        public void bind(Jawaban jawaban, int selectedId) {
+        public void bind(Jawaban jawaban, int selectedId, OnJawabanClickListener clickListener) {
             // Set option letter based on urutan
             String optionLetter = getOptionLetter(jawaban.getUrutan());
             tvOptionLetter.setText(optionLetter);
@@ -102,7 +102,7 @@ public class JawabanAdapter extends RecyclerView.Adapter<JawabanAdapter.ViewHold
                 tvJawaban.setTextColor(rootView.getContext().getResources().getColor(R.color.primary_green_dark));
                 ivCheck.setVisibility(View.VISIBLE);
                 ivCheck.setImageResource(R.drawable.ic_check_circle);
-                ivCheck.setTint(rootView.getContext().getResources().getColor(R.color.primary_green));
+                ivCheck.setColorFilter(rootView.getContext().getResources().getColor(R.color.primary_green));
             } else {
                 // Normal state
                 cardJawaban.setStrokeWidth(1);
@@ -115,8 +115,8 @@ public class JawabanAdapter extends RecyclerView.Adapter<JawabanAdapter.ViewHold
 
             // Set click listener
             cardJawaban.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onJawabanClick(jawaban);
+                if (clickListener != null) {
+                    clickListener.onJawabanClick(jawaban);
                 }
             });
 

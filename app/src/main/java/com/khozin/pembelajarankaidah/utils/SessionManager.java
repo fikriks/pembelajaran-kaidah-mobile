@@ -47,18 +47,30 @@ public class SessionManager {
      * Simpan login session
      */
     public void createLoginSession(@NonNull LoginResponse loginResponse) {
+        android.util.Log.d("SessionManager", "=== SESSION CREATION DEBUG START ===");
+
         if (!loginResponse.isValid()) {
+            android.util.Log.e("SessionManager", "Login response not valid");
             throw new IllegalArgumentException("Login response tidak valid");
         }
 
         Siswa siswa = loginResponse.getSiswa();
         if (siswa == null) {
+            android.util.Log.e("SessionManager", "Siswa data is null");
             throw new IllegalArgumentException("Data siswa tidak boleh null");
         }
 
+        android.util.Log.d("SessionManager", "Creating session for: " + siswa.getNamaLengkap() +
+                          " (ID: " + siswa.getId() + ", NIS: " + siswa.getNis() + ")");
+
         // Save user data
         editor.putBoolean(KEY_IS_LOGGED_IN, true);
-        editor.putString(KEY_AUTH_TOKEN, loginResponse.getToken());
+
+        // Fix: Use correct method name from LoginResponse
+        String token = loginResponse.getToken(); // Correct method name
+        android.util.Log.d("SessionManager", "Token: " + (token != null ? "PRESENT" : "NULL"));
+        editor.putString(KEY_AUTH_TOKEN, token);
+
         editor.putString(KEY_USER_DATA, gson.toJson(siswa));
         editor.putInt(KEY_USER_ID, siswa.getId());
         editor.putString(KEY_USER_NIS, siswa.getNis());
@@ -70,7 +82,10 @@ public class SessionManager {
         editor.putString(KEY_APP_VERSION, getAppVersion());
         editor.putLong(KEY_LAST_ACTIVE, System.currentTimeMillis());
 
+        android.util.Log.d("SessionManager", "Committing session data...");
         editor.apply();
+        android.util.Log.d("SessionManager", "Session data committed successfully");
+        android.util.Log.d("SessionManager", "=== SESSION CREATION DEBUG END ===");
     }
 
     /**

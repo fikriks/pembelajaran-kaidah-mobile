@@ -6,9 +6,13 @@ import androidx.room.Delete;
 import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
+import androidx.room.RoomWarnings;
 import androidx.room.Update;
 
 import com.khozin.pembelajarankaidah.data.model.Jawaban;
+import com.khozin.pembelajarankaidah.database.entity.JawabanStatistics;
+import com.khozin.pembelajarankaidah.database.entity.JawabanUnikStats;
+import com.khozin.pembelajarankaidah.database.entity.JawabanPerforma;
 
 import java.util.List;
 
@@ -220,6 +224,7 @@ public interface JawabanDao {
     /**
      * Get jawaban yang sering dipilih
      */
+    @SuppressWarnings(RoomWarnings.CURSOR_MISMATCH)
     @Query("SELECT j.*, COUNT(djs.id_detail) as selection_count " +
             "FROM jawaban j " +
             "INNER JOIN detail_jawaban_siswa djs ON j.id_pilihan = djs.id_pilihan " +
@@ -248,11 +253,12 @@ public interface JawabanDao {
             "COUNT(CASE WHEN is_benar = 0 THEN 1 END) as jawaban_salah, " +
             "AVG(urutan) as rata_rata_urutan " +
             "FROM jawaban")
-    Object[] getJawabanStatistics();
+    JawabanStatistics getJawabanStatistics();
 
     /**
      * Get jawaban performance untuk siswa
      */
+    @SuppressWarnings(RoomWarnings.CURSOR_MISMATCH)
     @Query("SELECT j.*, " +
             "COUNT(djs.id_detail) as total_dipilih, " +
             "COUNT(CASE WHEN djs.is_benar = 1 THEN 1 END) as total_benar, " +
@@ -320,6 +326,7 @@ public interface JawabanDao {
     /**
      * Get jawaban yang sering salah dipilih
      */
+    @SuppressWarnings(RoomWarnings.CURSOR_MISMATCH)
     @Query("SELECT j.*, COUNT(djs.id_detail) as salah_count " +
             "FROM jawaban j " +
             "INNER JOIN detail_jawaban_siswa djs ON j.id_pilihan = djs.id_pilihan " +
@@ -333,5 +340,5 @@ public interface JawabanDao {
      * Get jawaban unik per soal
      */
     @Query("SELECT COUNT(DISTINCT id_soal) as unique_soal, COUNT(*) as total_jawaban FROM jawaban")
-    Object[] getJawabanUnikStats();
+    JawabanUnikStats getJawabanUnikStats();
 }

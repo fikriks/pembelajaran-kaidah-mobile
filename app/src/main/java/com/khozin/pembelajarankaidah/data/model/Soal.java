@@ -4,6 +4,9 @@ import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 import androidx.room.ColumnInfo;
 import androidx.room.ForeignKey;
+import androidx.room.Ignore;
+import androidx.room.Relation;
+import androidx.room.Index;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.google.gson.annotations.SerializedName;
@@ -14,6 +17,10 @@ import java.util.List;
  * Sesuai database schema di CLAUDE.md
  */
 @Entity(tableName = "soal",
+        indices = {
+            @Index(value = {"id_materi"}),
+            @Index(value = {"id_materi", "tingkat_kesulitan"})
+        },
         foreignKeys = @ForeignKey(entity = MateriKaidah.class,
                 parentColumns = "id_materi",
                 childColumns = "id_materi",
@@ -57,10 +64,18 @@ public class Soal {
     private String waktuDiubah;
 
     // Additional fields untuk mobile app
-    private List<Jawaban> pilihanJawaban;
+    @ColumnInfo(name = "urutan_dalam_sesi")
     private int urutanDalamSesi;
+
+    @ColumnInfo(name = "is_answered")
     private boolean isAnswered = false;
+
+    @ColumnInfo(name = "selected_jawaban_id")
     private int selectedJawabanId = -1;
+
+    // Note: pilihanJawaban is handled via separate queries, not stored in database entity
+    @Ignore
+    private List<Jawaban> pilihanJawaban;
 
     // Default constructor
     public Soal() {
@@ -70,6 +85,7 @@ public class Soal {
     }
 
     // Constructor minimal
+    @Ignore
     public Soal(int idMateri, String pertanyaan, String tingkatKesulitan, int poin) {
         this.idMateri = idMateri;
         this.pertanyaan = pertanyaan;

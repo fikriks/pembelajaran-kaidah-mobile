@@ -4,7 +4,10 @@ import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 import androidx.room.ColumnInfo;
 import androidx.room.ForeignKey;
+import androidx.room.Ignore;
+import androidx.room.Index;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import com.google.gson.annotations.SerializedName;
 
 /**
@@ -13,6 +16,12 @@ import com.google.gson.annotations.SerializedName;
  * Penting untuk LCM algorithm tracking
  */
 @Entity(tableName = "sesi_latihan",
+        indices = {
+            @Index(value = {"id_siswa"}),
+            @Index(value = {"id_materi"}),
+            @Index(value = {"id_siswa", "id_materi"}),
+            @Index(value = {"status"})
+        },
         foreignKeys = {
             @ForeignKey(entity = Siswa.class,
                     parentColumns = "id",
@@ -71,11 +80,22 @@ public class SesiLatihan {
     private String waktuDibuat;
 
     // Additional fields untuk mobile app
+    @ColumnInfo(name = "materi_judul")
     private String materiJudul;
+
+    @ColumnInfo(name = "siswa_nama")
     private String siswaNama;
+
+    @ColumnInfo(name = "current_question_index")
     private int currentQuestionIndex = 0;
+
+    @ColumnInfo(name = "jumlah_soal_dijawab")
     private int jumlahSoalDijawab = 0;
+
+    @ColumnInfo(name = "is_paused")
     private boolean isPaused = false;
+
+    @ColumnInfo(name = "last_pause_time")
     private long lastPauseTime = 0;
 
     // LCM Algorithm Parameters (sesuai skripsi)
@@ -93,6 +113,7 @@ public class SesiLatihan {
     }
 
     // Constructor untuk membuat sesi baru
+    @Ignore
     public SesiLatihan(int idSiswa, int idMateri, int totalSoal, long seed) {
         this();
         this.idSiswa = idSiswa;

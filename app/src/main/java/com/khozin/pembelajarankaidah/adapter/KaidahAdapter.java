@@ -43,7 +43,7 @@ public class KaidahAdapter extends RecyclerView.Adapter<KaidahAdapter.ViewHolder
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         MateriKaidah kaidah = kaidahList.get(position);
-        holder.bind(kaidah);
+        holder.bind(kaidah, listener);
     }
 
     @Override
@@ -67,7 +67,7 @@ public class KaidahAdapter extends RecyclerView.Adapter<KaidahAdapter.ViewHolder
         return kaidahList.get(position);
     }
 
-    static class ViewHolder extends RecyclerView.ViewHolder {
+    class ViewHolder extends RecyclerView.ViewHolder {
         private MaterialCardView cardKaidah;
         private ImageView ivIcon;
         private TextView tvJudul;
@@ -91,7 +91,7 @@ public class KaidahAdapter extends RecyclerView.Adapter<KaidahAdapter.ViewHolder
             rootView = itemView;
         }
 
-        public void bind(MateriKaidah kaidah) {
+        public void bind(MateriKaidah kaidah, OnKaidahClickListener clickListener) {
             // Set judul kaidah
             tvJudul.setText(kaidah.getJudulKaidah());
 
@@ -125,30 +125,14 @@ public class KaidahAdapter extends RecyclerView.Adapter<KaidahAdapter.ViewHolder
                 progressBar.setIndicatorColor(rootView.getContext().getResources().getColor(R.color.success));
             }
 
-            // Set icon berdasarkan tingkat kesulitan
-            switch (kaidah.getTingkatKesulitan()) {
-                case "mudah":
-                    ivIcon.setImageResource(R.drawable.ic_easy);
-                    ivIcon.setBackgroundTintList(rootView.getContext().getResources().getColorStateList(R.color.success_light));
-                    break;
-                case "sedang":
-                    ivIcon.setImageResource(R.drawable.ic_medium);
-                    ivIcon.setBackgroundTintList(rootView.getContext().getResources().getColorStateList(R.color.orange_light));
-                    break;
-                case "sulit":
-                    ivIcon.setImageResource(R.drawable.ic_hard);
-                    ivIcon.setBackgroundTintList(rootView.getContext().getResources().getColorStateList(R.color.error_light));
-                    break;
-                default:
-                    ivIcon.setImageResource(R.drawable.ic_book);
-                    ivIcon.setBackgroundTintList(rootView.getContext().getResources().getColorStateList(R.color.primary_green_light));
-                    break;
-            }
+            // Set default icon for all kaidah
+            ivIcon.setImageResource(R.drawable.ic_book);
+            ivIcon.setBackgroundTintList(rootView.getContext().getResources().getColorStateList(R.color.primary_green_light));
 
             // Set card click listener
             cardKaidah.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onKaidahClick(kaidah);
+                if (clickListener != null) {
+                    clickListener.onKaidahClick(kaidah);
                 }
             });
 

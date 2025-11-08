@@ -4,6 +4,8 @@ import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 import androidx.room.ColumnInfo;
 import androidx.room.ForeignKey;
+import androidx.room.Ignore;
+import androidx.room.Index;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.google.gson.annotations.SerializedName;
@@ -14,6 +16,13 @@ import com.google.gson.annotations.SerializedName;
  * Tracking detail jawaban siswa per sesi
  */
 @Entity(tableName = "detail_jawaban_siswa",
+        indices = {
+            @Index(value = {"id_sesi"}),
+            @Index(value = {"id_soal"}),
+            @Index(value = {"id_pilihan"}),
+            @Index(value = {"id_sesi", "id_soal"}),
+            @Index(value = {"id_sesi", "is_benar"})
+        },
         foreignKeys = {
             @ForeignKey(entity = SesiLatihan.class,
                     parentColumns = "id_sesi",
@@ -55,10 +64,19 @@ public class DetailJawabanSiswa {
     private String waktuJawab;
 
     // Additional fields untuk mobile app
+    @ColumnInfo(name = "pertanyaan_text")
     private String pertanyaanText;
+
+    @ColumnInfo(name = "jawaban_text")
     private String jawabanText;
+
+    @ColumnInfo(name = "jawaban_benar_text")
     private String jawabanBenarText;
+
+    @ColumnInfo(name = "waktu_respons_detik")
     private int waktuResponsDetik = 0;
+
+    @ColumnInfo(name = "is_reviewed")
     private boolean isReviewed = false;
 
     // Default constructor
@@ -70,6 +88,7 @@ public class DetailJawabanSiswa {
     }
 
     // Constructor untuk membuat detail jawaban baru
+    @Ignore
     public DetailJawabanSiswa(int idSesi, int idSoal, Integer idPilihan, int urutanSoal, boolean isBenar) {
         this();
         this.idSesi = idSesi;

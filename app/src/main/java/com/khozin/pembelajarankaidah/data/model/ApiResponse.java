@@ -38,7 +38,7 @@ public class ApiResponse<T> {
         this.status = "success";
         this.message = message;
         this.data = data;
-        this.code = 200;
+        this.code = 200; // Standard HTTP success code
     }
 
     // Constructor untuk error response
@@ -95,7 +95,7 @@ public class ApiResponse<T> {
      * Check apakah response sukses
      */
     public boolean isSuccess() {
-        return "success".equals(status) && code >= 200 && code < 300;
+        return "success".equals(status) && (code == 0 || (code >= 200 && code < 300));
     }
 
     /**

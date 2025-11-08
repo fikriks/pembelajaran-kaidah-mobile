@@ -1,5 +1,6 @@
 package com.khozin.pembelajarankaidah.ui.quiz;
 
+import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.view.View;
@@ -60,6 +61,9 @@ public class QuizActivity extends AppCompatActivity {
     // Timer
     private CountDownTimer countDownTimer;
     private long timeLeftInMillis = 600000; // 10 menit
+
+    // Exit state
+    private boolean isExiting = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -162,10 +166,7 @@ public class QuizActivity extends AppCompatActivity {
         lcmSeed = timestamp + userId;
 
         // Initialize LCM dengan parameter skripsi
-        lcm = new LinearCongruentMethod(lcmSeed,
-                SesiLatihan.LCM_A,
-                SesiLatihan.LCM_C,
-                SesiLatihan.LCM_M);
+        lcm = new LinearCongruentMethod(lcmSeed);
     }
 
     /**
@@ -196,13 +197,13 @@ public class QuizActivity extends AppCompatActivity {
 
                 // Create sesi latihan
                 currentSesi = new SesiLatihan();
-                currentSesi.setIdSiswa(userId);
+                currentSesi.setIdSiswa(sessionManager.getUserId());
                 currentSesi.setIdMateri(kaidahId);
                 currentSesi.setSeedDigunakan(lcmSeed);
                 currentSesi.setTotalSoal(soalList.size());
                 currentSesi.setSoalBenar(0);
                 currentSesi.setSkor(0.0f);
-                currentSesi.setWaktuMulai(System.currentTimeMillis());
+                currentSesi.setWaktuMulai(String.valueOf(System.currentTimeMillis()));
                 currentSesi.setStatus("sedang_berjalan");
 
                 // Save sesi to database
@@ -373,7 +374,7 @@ public class QuizActivity extends AppCompatActivity {
 
                 // Check if jawaban is correct
                 Jawaban jawaban = database.jawabanDao().getById(jawabanId);
-                boolean isCorrect = (jawaban != null && jawaban.getIsBenar());
+                boolean isCorrect = (jawaban != null && jawaban.isBenar());
 
                 // Save to detail_jawaban_siswa
                 DetailJawabanSiswa detail = new DetailJawabanSiswa();
@@ -381,8 +382,8 @@ public class QuizActivity extends AppCompatActivity {
                 detail.setIdSoal(currentSoal.getIdSoal());
                 detail.setIdPilihan(jawabanId);
                 detail.setUrutanSoal(currentQuestionIndex + 1);
-                detail.setIsBenar(isCorrect ? 1 : 0);
-                detail.setWaktuJawab(System.currentTimeMillis());
+                detail.setBenar(isCorrect);
+                detail.setWaktuJawab(String.valueOf(System.currentTimeMillis()));
 
                 database.detailJawabanSiswaDao().insert(detail);
 
@@ -412,8 +413,18 @@ public class QuizActivity extends AppCompatActivity {
         }
 
         // Update sesi
-        currentSesi.setWaktuSelesai(System.currentTimeMillis());
-        currentSesi.setDurasiDetik((int) ((currentSesi.getWaktuSelesai() - currentSesi.getWaktuMulai()) / 1000));
+        long waktuSelesai = System.currentTimeMillis();
+        currentSesi.setWaktuSelesai(String.valueOf(waktuSelesai));
+
+        // Calculate duration in seconds
+        try {
+            long waktuMulai = Long.parseLong(currentSesi.getWaktuMulai());
+            int durasi = (int) ((waktuSelesai - waktuMulai) / 1000);
+            currentSesi.setDurasiDetik(durasi);
+        } catch (NumberFormatException e) {
+            // If parsing fails, set duration to 0
+            currentSesi.setDurasiDetik(0);
+        }
         currentSesi.setStatus("selesai");
 
         Executors.newSingleThreadExecutor().execute(() -> {
@@ -441,8 +452,23 @@ public class QuizActivity extends AppCompatActivity {
      * Show exit confirmation
      */
     private void showExitConfirmation() {
-        // TODO: Show confirmation dialog
-        finish();
+        androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(this);
+        builder.setTitle("Keluar dari Quiz");
+        builder.setMessage("Apakah Anda yakin ingin keluar dari quiz? Progress Anda akan hilang.");
+        builder.setPositiveButton("Ya", (dialog, which) -> {
+            isExiting = true;
+            finish();
+        });
+        builder.setNegativeButton("Tidak", (dialog, which) -> {
+            dialog.dismiss();
+            // Handle the negative case to ensure proper flow
+            isExiting = false;
+        });
+        builder.setOnCancelListener(dialog -> {
+            // Handle dialog cancellation
+            isExiting = false;
+        });
+        builder.show();
     }
 
     /**
@@ -474,8 +500,14 @@ public class QuizActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    public void onBackPressed() {
-        showExitConfirmation();
+    /**
+     * Handle back button press with modern approach
+     */
+    private void handleOnBackPressed() {
+        if (!isExiting) {
+            showExitConfirmation();
+        } else {
+            finish();
+        }
     }
 }

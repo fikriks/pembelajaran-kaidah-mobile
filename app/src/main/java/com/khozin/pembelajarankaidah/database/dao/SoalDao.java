@@ -6,9 +6,13 @@ import androidx.room.Delete;
 import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
+import androidx.room.RoomWarnings;
 import androidx.room.Update;
 
 import com.khozin.pembelajarankaidah.data.model.Soal;
+import com.khozin.pembelajarankaidah.database.entity.SoalStatistics;
+import com.khozin.pembelajarankaidah.database.entity.SoalWithJawabanCount;
+import com.khozin.pembelajarankaidah.database.entity.SoalPerformaPerTingkat;
 
 import java.util.List;
 
@@ -119,7 +123,7 @@ public interface SoalDao {
             "COUNT(CASE WHEN tingkat_kesulitan = 'sulit' THEN 1 END) as sulit, " +
             "AVG(poin) as rata_rata_poin " +
             "FROM soal")
-    Object[] getSoalStatistics();
+    SoalStatistics getSoalStatistics();
 
     /**
      * Search soal by pertanyaan
@@ -178,11 +182,12 @@ public interface SoalDao {
     /**
      * Get soal dengan jawaban count
      */
+    @SuppressWarnings(RoomWarnings.CURSOR_MISMATCH)
     @Query("SELECT s.*, " +
             "(SELECT COUNT(*) FROM jawaban j WHERE j.id_soal = s.id_soal) as jawaban_count " +
             "FROM soal s " +
             "ORDER BY s.id_soal ASC")
-    List<Soal> getSoalWithJawabanCount();
+    List<SoalWithJawabanCount> getSoalWithJawabanCount();
 
     /**
      * Get soal untuk quiz dengan LCM seed
@@ -215,6 +220,7 @@ public interface SoalDao {
     /**
      * Get soal untuk review
      */
+    @SuppressWarnings(RoomWarnings.CURSOR_MISMATCH)
     @Query("SELECT s.*, " +
             "COUNT(CASE WHEN djs.is_benar = 1 THEN 1 END) as benar_count, " +
             "COUNT(djs.id_detail) as total_jawaban " +
@@ -255,13 +261,14 @@ public interface SoalDao {
      */
     @Query("SELECT s.tingkat_kesulitan, " +
             "COUNT(*) as total_soal, " +
-            "COUNT(CASE WHEN djs.is_benar = 1 THEN 1 END) as benar, " +
-            "AVG(s.poin) as rata_rata_poin " +
+            "COUNT(djs.id_detail) as total_jawaban, " +
+            "COUNT(CASE WHEN djs.is_benar = 1 THEN 1 END) as jawaban_benar, " +
+            "CAST(COUNT(CASE WHEN djs.is_benar = 1 THEN 1 END) AS FLOAT) / COUNT(djs.id_detail) as benar_rate " +
             "FROM soal s " +
             "LEFT JOIN detail_jawaban_siswa djs ON s.id_soal = djs.id_soal " +
             "LEFT JOIN sesi_latihan sl ON djs.id_sesi = sl.id_sesi AND sl.id_siswa = :siswaId " +
             "GROUP BY s.tingkat_kesulitan")
-    Object[] getPerformaPerTingkat(int siswaId);
+    List<SoalPerformaPerTingkat> getPerformaPerTingkat(int siswaId);
 
     /**
      * Batch insert dengan progress tracking

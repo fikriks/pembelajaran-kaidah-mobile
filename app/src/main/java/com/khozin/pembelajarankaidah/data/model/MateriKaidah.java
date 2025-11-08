@@ -3,6 +3,7 @@ package com.khozin.pembelajarankaidah.data.model;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 import androidx.room.ColumnInfo;
+import androidx.room.Ignore;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.google.gson.annotations.SerializedName;
@@ -38,11 +39,6 @@ public class MateriKaidah {
     @ColumnInfo(name = "contoh")
     private String contoh;
 
-    @SerializedName("tingkat_kesulitan")
-    @NonNull
-    @ColumnInfo(name = "tingkat_kesulitan")
-    private String tingkatKesulitan; // mudah, sedang, sulit
-
     @ColumnInfo(name = "urutan")
     private int urutan;
 
@@ -58,20 +54,24 @@ public class MateriKaidah {
     private String waktuDiubah;
 
     // Additional fields untuk mobile app
+    @ColumnInfo(name = "total_soal")
     private int totalSoal = 0;
+
+    @ColumnInfo(name = "is_completed")
     private boolean isCompleted = false;
+
+    @ColumnInfo(name = "progress_percentage")
     private int progressPercentage = 0;
 
     // Default constructor
     public MateriKaidah() {
-        this.tingkatKesulitan = "mudah";
         this.urutan = 0;
     }
 
     // Constructor minimal
-    public MateriKaidah(String judulKaidah, String tingkatKesulitan, int urutan) {
+    @Ignore
+    public MateriKaidah(String judulKaidah, int urutan) {
         this.judulKaidah = judulKaidah;
-        this.tingkatKesulitan = tingkatKesulitan;
         this.urutan = urutan;
     }
 
@@ -120,15 +120,7 @@ public class MateriKaidah {
         this.contoh = contoh;
     }
 
-    @NonNull
-    public String getTingkatKesulitan() {
-        return tingkatKesulitan;
-    }
-
-    public void setTingkatKesulitan(@NonNull String tingkatKesulitan) {
-        this.tingkatKesulitan = tingkatKesulitan;
-    }
-
+    
     public int getUrutan() {
         return urutan;
     }
@@ -185,38 +177,21 @@ public class MateriKaidah {
         this.progressPercentage = progressPercentage;
     }
 
-    /**
-     * Mendapatkan warna untuk tingkat kesulitan
-     */
-    public int getTingkatKesulitanColor() {
-        switch (tingkatKesulitan.toLowerCase()) {
-            case "mudah":
-                return android.graphics.Color.parseColor("#4CAF50"); // Green
-            case "sedang":
-                return android.graphics.Color.parseColor("#FF9800"); // Orange
-            case "sulit":
-                return android.graphics.Color.parseColor("#F44336"); // Red
-            default:
-                return android.graphics.Color.parseColor("#9E9E9E"); // Grey
+    public String getStatus() {
+        if (isCompleted) {
+            return "selesai";
+        } else if (progressPercentage > 0) {
+            return "sedang_belajar";
+        } else {
+            return "belum_dimulai";
         }
     }
 
-    /**
-     * Mendapatkan ikon untuk tingkat kesulitan
-     */
-    public String getTingkatKesulitanIcon() {
-        switch (tingkatKesulitan.toLowerCase()) {
-            case "mudah":
-                return "😊";
-            case "sedang":
-                return "😐";
-            case "sulit":
-                return "😰";
-            default:
-                return "❓";
-        }
+    public float getPersentasePenguasaan() {
+        return progressPercentage;
     }
 
+    
     /**
      * Mendapatkan deskripsi singkat untuk display
      */
@@ -240,12 +215,12 @@ public class MateriKaidah {
         }
     }
 
+    
     @Override
     public String toString() {
         return "MateriKaidah{" +
                 "idMateri=" + idMateri +
                 ", judulKaidah='" + judulKaidah + '\'' +
-                ", tingkatKesulitan='" + tingkatKesulitan + '\'' +
                 ", urutan=" + urutan +
                 ", totalSoal=" + totalSoal +
                 ", progressPercentage=" + progressPercentage +

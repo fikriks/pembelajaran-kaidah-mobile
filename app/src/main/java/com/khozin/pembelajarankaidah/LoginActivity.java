@@ -4,7 +4,11 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.annotation.SuppressLint;
+import android.util.Log;
 import android.view.View;
+import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -28,8 +32,8 @@ public class LoginActivity extends AppCompatActivity {
     private TextInputEditText etPassword;
     private TextInputLayout tilNis;
     private TextInputLayout tilPassword;
-    private MaterialButton btnLogin;
-    private CircularProgressIndicator progressIndicator;
+    private Button btnLogin;
+    private ProgressBar progressIndicator;
 
     // Business Logic
     private LoginRepository loginRepository;
@@ -128,9 +132,24 @@ public class LoginActivity extends AppCompatActivity {
 
             @Override
             public void onSuccess(LoginResponse loginResponse) {
+                Log.d("LOGIN_DEBUG", "SUCCESS: Login callback triggered");
+                Log.d("LOGIN_DEBUG", "User: " + loginResponse.getUserDisplayName());
+
                 setViewState(true);
                 showToast("Login berhasil! Selamat datang, " + loginResponse.getUserDisplayName());
-                navigateToMain();
+
+                Log.d("LOGIN_DEBUG", "Toast shown, checking session...");
+                boolean isLoggedIn = loginRepository.isLoggedIn();
+                Log.d("LOGIN_DEBUG", "Session valid: " + isLoggedIn);
+
+                if (isLoggedIn) {
+                    Log.d("LOGIN_DEBUG", "Session valid, navigating to main...");
+                    navigateToMain();
+                    Log.d("LOGIN_DEBUG", "Navigation completed");
+                } else {
+                    Log.e("LOGIN_DEBUG", "Session creation failed!");
+                    showToast("Error: Sesi tidak tersimpan");
+                }
             }
 
             @Override
@@ -247,10 +266,23 @@ public class LoginActivity extends AppCompatActivity {
      * Navigate to main activity
      */
     private void navigateToMain() {
-        Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-        finish();
+        android.util.Log.d("LoginActivity", "=== NAVIGATE TO MAIN START ===");
+        try {
+            android.util.Log.d("LoginActivity", "Creating Intent for MainActivity...");
+            Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+
+            android.util.Log.d("LoginActivity", "Starting MainActivity...");
+            startActivity(intent);
+
+            android.util.Log.d("LoginActivity", "Finishing LoginActivity...");
+            finish();
+
+            android.util.Log.d("LoginActivity", "Navigation to MainActivity completed successfully");
+        } catch (Exception e) {
+            android.util.Log.e("LoginActivity", "Error during navigation to MainActivity", e);
+        }
+        android.util.Log.d("LoginActivity", "=== NAVIGATE TO MAIN END ===");
     }
 
     /**
@@ -271,6 +303,8 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     @Override
+    @SuppressLint({"OnBackPressed", "GestureBackNavigation"})
+    @SuppressWarnings("deprecation")
     public void onBackPressed() {
         // Confirm exit
         if (btnLogin.isEnabled()) {

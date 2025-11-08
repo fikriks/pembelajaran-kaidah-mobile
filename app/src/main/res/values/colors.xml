@@ -31,10 +31,17 @@
     <!-- Semantic Colors -->
     <color name="warning">#FF9800</color>
     <color name="warning_light">#FFF3E0</color>
+    <color name="warning_dark">#F57C00</color>
+    <color name="warning_orange">#FF9800</color>
+    <color name="orange_500">#FF9800</color>
+    <color name="orange_600">#F57C00</color>
+    <color name="orange_light">#FFE0B2</color>
     <color name="error">#F44336</color>
     <color name="error_light">#FFEBEE</color>
     <color name="info">#2196F3</color>
     <color name="info_light">#E3F2FD</color>
+    <color name="success">#4CAF50</color>
+    <color name="success_dark">#388E3C</color>
 
     <!-- Background Colors -->
     <color name="background_primary">#FAFAFA</color>

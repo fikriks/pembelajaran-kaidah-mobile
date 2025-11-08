@@ -19,7 +19,8 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
             app:cardCornerRadius="16dp"
-            app:cardElevation="2dp">
+            app:cardElevation="2dp"
+            app:cardBackgroundColor="@color/white">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -76,6 +77,17 @@
                     android:textAppearance="@style/TextAppearance.PembelajaranKaidah.BodyMedium"
                     android:textColor="@color/text_secondary" />
 
+                <!-- Status Progress -->
+                <TextView
+                    android:id="@+id/tvStatusProgress"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Mulai belajar"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_secondary"
+                    android:textStyle="bold" />
+
             </LinearLayout>
 
         </androidx.cardview.widget.CardView>
@@ -95,7 +107,8 @@
                 android:layout_marginEnd="8dp"
                 android:layout_weight="1"
                 app:cardCornerRadius="12dp"
-                app:cardElevation="2dp">
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/white">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -131,7 +144,8 @@
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
                 app:cardCornerRadius="12dp"
-                app:cardElevation="2dp">
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/white">
 
                 <LinearLayout
                     android:layout_width="match_parent"

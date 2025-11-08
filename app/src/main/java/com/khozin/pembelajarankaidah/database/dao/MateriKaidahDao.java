@@ -7,8 +7,11 @@ import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
 import androidx.room.Update;
+import androidx.room.RoomWarnings;
 
 import com.khozin.pembelajarankaidah.data.model.MateriKaidah;
+import com.khozin.pembelajarankaidah.database.entity.MateriKaidahStatistics;
+import com.khozin.pembelajarankaidah.database.entity.MateriKaidahWithSoalCount;
 
 import java.util.List;
 
@@ -67,12 +70,7 @@ public interface MateriKaidahDao {
     @Query("SELECT * FROM materi_kaidah ORDER BY urutan ASC, id_materi ASC")
     List<MateriKaidah> getAllMateriSync();
 
-    /**
-     * Get materi kaidah by tingkat kesulitan
-     */
-    @Query("SELECT * FROM materi_kaidah WHERE tingkat_kesulitan = :tingkat ORDER BY urutan ASC")
-    LiveData<List<MateriKaidah>> getByTingkatKesulitan(String tingkat);
-
+  
     /**
      * Get materi kaidah untuk search
      */
@@ -80,27 +78,16 @@ public interface MateriKaidahDao {
     LiveData<List<MateriKaidah>> searchMateri(String query);
 
     /**
-     * Get total count materi kaidah
+     * Get total count of materi kaidah
      */
     @Query("SELECT COUNT(*) FROM materi_kaidah")
-    int getTotalCount();
-
-    /**
-     * Get count by tingkat kesulitan
-     */
-    @Query("SELECT COUNT(*) FROM materi_kaidah WHERE tingkat_kesulitan = :tingkat")
-    int getCountByTingkat(String tingkat);
+    int getCount();
 
     /**
      * Get materi statistics
      */
-    @Query("SELECT " +
-            "COUNT(*) as total, " +
-            "COUNT(CASE WHEN tingkat_kesulitan = 'mudah' THEN 1 END) as mudah, " +
-            "COUNT(CASE WHEN tingkat_kesulitan = 'sedang' THEN 1 END) as sedang, " +
-            "COUNT(CASE WHEN tingkat_kesulitan = 'sulit' THEN 1 END) as sulit " +
-            "FROM materi_kaidah")
-    Object[] getMateriStatistics();
+    @Query("SELECT COUNT(*) as total FROM materi_kaidah")
+    MateriKaidahStatistics getMateriStatistics();
 
     /**
      * Update urutan materi kaidah
@@ -123,6 +110,7 @@ public interface MateriKaidahDao {
     /**
      * Get materi dengan progress untuk siswa tertentu
      */
+    @SuppressWarnings(RoomWarnings.CURSOR_MISMATCH)
     @Query("SELECT mk.*, " +
             "CASE WHEN rb.id_riwayat IS NOT NULL THEN rb.persentase_penguasaan ELSE 0 END as progress, " +
             "CASE WHEN rb.id_riwayat IS NOT NULL THEN rb.status ELSE 'belum_dimulai' END as status_belajar " +
@@ -130,6 +118,18 @@ public interface MateriKaidahDao {
             "LEFT JOIN riwayat_belajar rb ON mk.id_materi = rb.id_materi AND rb.id_siswa = :siswaId " +
             "ORDER BY mk.urutan ASC")
     LiveData<List<MateriKaidah>> getMateriWithProgress(int siswaId);
+
+    /**
+     * Get materi dengan progress untuk siswa tertentu (sync)
+     */
+    @SuppressWarnings(RoomWarnings.CURSOR_MISMATCH)
+    @Query("SELECT mk.*, " +
+            "CASE WHEN rb.id_riwayat IS NOT NULL THEN rb.persentase_penguasaan ELSE 0 END as progress, " +
+            "CASE WHEN rb.id_riwayat IS NOT NULL THEN rb.status ELSE 'belum_dimulai' END as status_belajar " +
+            "FROM materi_kaidah mk " +
+            "LEFT JOIN riwayat_belajar rb ON mk.id_materi = rb.id_materi AND rb.id_siswa = :siswaId " +
+            "ORDER BY mk.urutan ASC")
+    List<MateriKaidah> getMateriWithProgressSync(int siswaId);
 
     /**
      * Get materi by dibuat_oleh
@@ -147,6 +147,24 @@ public interface MateriKaidahDao {
     LiveData<List<MateriKaidah>> getMateriBelumSelesai(int siswaId);
 
     /**
+     * Get materi yang belum dipelajari siswa (sync)
+     */
+    @Query("SELECT mk.* FROM materi_kaidah mk " +
+            "LEFT JOIN riwayat_belajar rb ON mk.id_materi = rb.id_materi AND rb.id_siswa = :siswaId " +
+            "WHERE rb.id_riwayat IS NULL OR rb.status != 'selesai' " +
+            "ORDER BY mk.urutan ASC")
+    List<MateriKaidah> getMateriBelumSelesaiSync(int siswaId);
+
+    /**
+     * Get materi yang belum dimulai siswa (sync)
+     */
+    @Query("SELECT mk.* FROM materi_kaidah mk " +
+            "LEFT JOIN riwayat_belajar rb ON mk.id_materi = rb.id_materi AND rb.id_siswa = :siswaId " +
+            "WHERE rb.id_riwayat IS NULL OR rb.status = 'belum_dimulai' " +
+            "ORDER BY mk.urutan ASC")
+    List<MateriKaidah> getMateriBelumDimulaiSync(int siswaId);
+
+    /**
      * Get materi yang sedang dipelajari siswa
      */
     @Query("SELECT mk.* FROM materi_kaidah mk " +
@@ -154,6 +172,15 @@ public interface MateriKaidahDao {
             "WHERE rb.status = 'sedang_belajar' " +
             "ORDER BY mk.urutan ASC")
     LiveData<List<MateriKaidah>> getMateriSedangBelajar(int siswaId);
+
+    /**
+     * Get materi yang sedang dipelajari siswa (sync)
+     */
+    @Query("SELECT mk.* FROM materi_kaidah mk " +
+            "INNER JOIN riwayat_belajar rb ON mk.id_materi = rb.id_materi AND rb.id_siswa = :siswaId " +
+            "WHERE rb.status = 'sedang_belajar' " +
+            "ORDER BY mk.urutan ASC")
+    List<MateriKaidah> getMateriSedangBelajarSync(int siswaId);
 
     /**
      * Get materi yang sudah selesai dipelajari siswa
@@ -165,8 +192,18 @@ public interface MateriKaidahDao {
     LiveData<List<MateriKaidah>> getMateriSelesai(int siswaId);
 
     /**
+     * Get materi yang sudah selesai dipelajari siswa (sync)
+     */
+    @Query("SELECT mk.* FROM materi_kaidah mk " +
+            "INNER JOIN riwayat_belajar rb ON mk.id_materi = rb.id_materi AND rb.id_siswa = :siswaId " +
+            "WHERE rb.status = 'selesai' " +
+            "ORDER BY rb.waktu_diubah DESC")
+    List<MateriKaidah> getMateriSelesaiSync(int siswaId);
+
+    /**
      * Get materi untuk dashboard (dengan progress summary)
      */
+    @SuppressWarnings(RoomWarnings.CURSOR_MISMATCH)
     @Query("SELECT mk.*, " +
             "COUNT(CASE WHEN rb.status = 'selesai' THEN 1 END) as selesai_count, " +
             "COUNT(rb.id_riwayat) as total_progress " +
@@ -204,11 +241,12 @@ public interface MateriKaidahDao {
     /**
      * Get materi dengan soal count
      */
+    @SuppressWarnings(RoomWarnings.CURSOR_MISMATCH)
     @Query("SELECT mk.*, " +
             "(SELECT COUNT(*) FROM soal s WHERE s.id_materi = mk.id_materi) as soal_count " +
             "FROM materi_kaidah mk " +
             "ORDER BY mk.urutan ASC")
-    List<MateriKaidah> getMateriWithSoalCount();
+    List<MateriKaidahWithSoalCount> getMateriWithSoalCount();
 
     /**
      * Get materi untuk export
@@ -224,11 +262,10 @@ public interface MateriKaidahDao {
             "deskripsi = :deskripsi, " +
             "penjelasan = :penjelasan, " +
             "contoh = :contoh, " +
-            "tingkat_kesulitan = :tingkat, " +
             "urutan = :urutan, " +
             "waktu_diubah = :waktuDiubah " +
             "WHERE id_materi = :id")
-    int updateFromApi(int id, String judul, String deskripsi, String penjelasan, String contoh, String tingkat, int urutan, String waktuDiubah);
+    int updateFromApi(int id, String judul, String deskripsi, String penjelasan, String contoh, int urutan, String waktuDiubah);
 
     /**
      * Batch insert dengan progress tracking

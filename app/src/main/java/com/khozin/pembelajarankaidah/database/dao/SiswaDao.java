@@ -9,6 +9,7 @@ import androidx.room.Query;
 import androidx.room.Update;
 
 import com.khozin.pembelajarankaidah.data.model.Siswa;
+import com.khozin.pembelajarankaidah.database.entity.SiswaStatistics;
 
 import java.util.List;
 
@@ -190,7 +191,7 @@ public interface SiswaDao {
     /**
      * Get siswa for export
      */
-    @Query("SELECT id, nis, nama_lengkap, jenis_kelamin, kelas, status, waktu_dibuat, waktu_diubah FROM siswa ORDER BY id ASC")
+    @Query("SELECT id, nis, nama_lengkap, jenis_kelamin, kelas, status, kata_sandi, waktu_dibuat, waktu_diubah FROM siswa ORDER BY id ASC")
     List<Siswa> getSiswaForExport();
 
     /**
@@ -209,7 +210,7 @@ public interface SiswaDao {
             "COUNT(CASE WHEN jenis_kelamin = 'L' THEN 1 END) as laki_laki, " +
             "COUNT(CASE WHEN jenis_kelamin = 'P' THEN 1 END) as perempuan " +
             "FROM siswa")
-    Object[] getSiswaStatistics();
+    SiswaStatistics getSiswaStatistics();
 
     /**
      * Batch insert dengan progress callback

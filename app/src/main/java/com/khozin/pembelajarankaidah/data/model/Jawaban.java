@@ -4,6 +4,8 @@ import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 import androidx.room.ColumnInfo;
 import androidx.room.ForeignKey;
+import androidx.room.Ignore;
+import androidx.room.Index;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.google.gson.annotations.SerializedName;
@@ -13,6 +15,10 @@ import com.google.gson.annotations.SerializedName;
  * Sesuai database schema di CLAUDE.md
  */
 @Entity(tableName = "jawaban",
+        indices = {
+            @Index(value = {"id_soal"}),
+            @Index(value = {"id_soal", "is_benar"})
+        },
         foreignKeys = @ForeignKey(entity = Soal.class,
                 parentColumns = "id_soal",
                 childColumns = "id_soal",
@@ -38,8 +44,15 @@ public class Jawaban {
     private int urutan;
 
     // Additional fields untuk mobile app
+    @ColumnInfo(name = "huruf_pilihan")
     private char hurufPilihan; // A, B, C, D
+
+    @ColumnInfo(name = "is_selected")
     private boolean isSelected = false;
+
+    @SerializedName("waktu_diubah")
+    @ColumnInfo(name = "waktu_diubah")
+    private String waktuDiubah;
 
     // Default constructor
     public Jawaban() {
@@ -49,6 +62,7 @@ public class Jawaban {
     }
 
     // Constructor minimal
+    @Ignore
     public Jawaban(int idSoal, String jawabanText, boolean isBenar, int urutan) {
         this.idSoal = idSoal;
         this.jawabanText = jawabanText;
@@ -83,6 +97,14 @@ public class Jawaban {
         this.jawabanText = jawabanText;
     }
 
+    /**
+     * Alias for getJawabanText() for backward compatibility
+     */
+    @NonNull
+    public String getJawaban() {
+        return jawabanText;
+    }
+
     public boolean isBenar() {
         return isBenar;
     }
@@ -114,6 +136,14 @@ public class Jawaban {
 
     public void setSelected(boolean selected) {
         isSelected = selected;
+    }
+
+    public String getWaktuDiubah() {
+        return waktuDiubah;
+    }
+
+    public void setWaktuDiubah(String waktuDiubah) {
+        this.waktuDiubah = waktuDiubah;
     }
 
     /**

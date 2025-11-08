@@ -4,6 +4,8 @@ import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 import androidx.room.ColumnInfo;
 import androidx.room.ForeignKey;
+import androidx.room.Ignore;
+import androidx.room.Index;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.google.gson.annotations.SerializedName;
@@ -14,6 +16,13 @@ import com.google.gson.annotations.SerializedName;
  * Tracking progress pembelajaran siswa per materi
  */
 @Entity(tableName = "riwayat_belajar",
+        indices = {
+            @Index(value = {"id_siswa"}),
+            @Index(value = {"id_materi"}),
+            @Index(value = {"id_siswa", "id_materi"}),
+            @Index(value = {"status"}),
+            @Index(value = {"waktu_diubah"})
+        },
         foreignKeys = {
             @ForeignKey(entity = Siswa.class,
                     parentColumns = "id",
@@ -58,12 +67,25 @@ public class RiwayatBelajar {
     private String waktuDiubah;
 
     // Additional fields untuk mobile app
+    @ColumnInfo(name = "materi_judul")
     private String materiJudul;
+
+    @ColumnInfo(name = "siswa_nama")
     private String siswaNama;
+
+    @ColumnInfo(name = "total_sesi_diikuti")
     private int totalSesiDiikuti = 0;
+
+    @ColumnInfo(name = "rata_rata_skor")
     private float rataRataSkor = 0.0f;
+
+    @ColumnInfo(name = "total_waktu_belajar_menit")
     private int totalWaktuBelajarMenit = 0;
+
+    @ColumnInfo(name = "streak_hari")
     private int streakHari = 0;
+
+    @ColumnInfo(name = "tanggal_selesai_terakhir")
     private String tanggalSelesaiTerakhir;
 
     // Status constants
@@ -83,6 +105,7 @@ public class RiwayatBelajar {
     }
 
     // Constructor untuk membuat riwayat baru
+    @Ignore
     public RiwayatBelajar(int idSiswa, int idMateri) {
         this();
         this.idSiswa = idSiswa;

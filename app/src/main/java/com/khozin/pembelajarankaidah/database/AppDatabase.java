@@ -25,7 +25,7 @@ import com.khozin.pembelajarankaidah.data.model.*;
         DetailJawabanSiswa.class,
         RiwayatBelajar.class
     },
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 public abstract class AppDatabase extends RoomDatabase {
@@ -70,7 +70,7 @@ public abstract class AppDatabase extends RoomDatabase {
                 AppDatabase.class,
                 DATABASE_NAME
         )
-        .addMigrations(MIGRATION_1_2) // Add migrations when needed
+        .fallbackToDestructiveMigration() // Recreate database when schema changes
         .addCallback(new RoomDatabase.Callback() {
             @Override
             public void onCreate(@NonNull SupportSQLiteDatabase db) {
@@ -168,14 +168,22 @@ public abstract class AppDatabase extends RoomDatabase {
          * Enable foreign keys
          */
         public static void enableForeignKeys(@NonNull SupportSQLiteDatabase db) {
-            db.execSQL("PRAGMA foreign_keys=ON");
+            // Use query instead of execSQL for PRAGMA statements
+            android.database.Cursor cursor = db.query("PRAGMA foreign_keys=ON");
+            if (cursor != null) {
+                cursor.close();
+            }
         }
 
         /**
          * Configure WAL mode for better concurrency
          */
         public static void configureWAL(@NonNull SupportSQLiteDatabase db) {
-            db.execSQL("PRAGMA journal_mode=WAL");
+            // Use query instead of execSQL for PRAGMA statements
+            android.database.Cursor cursor = db.query("PRAGMA journal_mode=WAL");
+            if (cursor != null) {
+                cursor.close();
+            }
         }
 
         /**
@@ -294,7 +302,6 @@ public abstract class AppDatabase extends RoomDatabase {
             MateriKaidah sampleMateri = new MateriKaidah();
             sampleMateri.setJudulKaidah("Isim Mufrad dan Jamak");
             sampleMateri.setDeskripsi("Pengenalan isim mufrad dan jamak dalam bahasa Arab");
-            sampleMateri.setTingkatKesulitan("mudah");
             sampleMateri.setUrutan(1);
             database.materiKaidahDao().insert(sampleMateri);
         }
@@ -325,7 +332,7 @@ public abstract class AppDatabase extends RoomDatabase {
         public static boolean checkIntegrity(@NonNull AppDatabase database) {
             try {
                 android.database.Cursor cursor = database.getOpenHelper().getReadableDatabase()
-                        .rawQuery("PRAGMA integrity_check", null);
+                        .query("PRAGMA integrity_check", null);
 
                 if (cursor.moveToFirst()) {
                     String result = cursor.getString(0);
@@ -346,15 +353,15 @@ public abstract class AppDatabase extends RoomDatabase {
             StringBuilder stats = new StringBuilder();
 
             try {
-                android.database.sqlite.SQLiteDatabase db = database.getOpenHelper().getReadableDatabase();
+                SupportSQLiteDatabase db = database.getOpenHelper().getReadableDatabase();
 
                 // Get table sizes
-                android.database.Cursor cursor = db.rawQuery(
+                android.database.Cursor cursor = db.query(
                         "SELECT name FROM sqlite_master WHERE type='table'", null);
 
                 while (cursor.moveToNext()) {
                     String tableName = cursor.getString(0);
-                    android.database.Cursor countCursor = db.rawQuery(
+                    android.database.Cursor countCursor = db.query(
                             "SELECT COUNT(*) FROM " + tableName, null);
 
                     if (countCursor.moveToFirst()) {

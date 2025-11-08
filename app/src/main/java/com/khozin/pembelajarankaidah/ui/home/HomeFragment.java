@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -12,13 +13,14 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.card.MaterialCardView;
-import com.google.android.material.progressindicator.CircularProgressIndicator;
+import android.widget.ProgressBar;
 import com.khozin.pembelajarankaidah.R;
 import com.khozin.pembelajarankaidah.adapter.KaidahSmallAdapter;
 import com.khozin.pembelajarankaidah.data.model.MateriKaidah;
 import com.khozin.pembelajarankaidah.data.model.SesiLatihan;
 import com.khozin.pembelajarankaidah.database.AppDatabase;
 import com.khozin.pembelajarankaidah.utils.SessionManager;
+import com.khozin.pembelajarankaidah.database.entity.SesiLatihanStatistics;
 
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -32,13 +34,13 @@ public class HomeFragment extends Fragment {
     // UI Components
     private TextView tvWelcome;
     private TextView tvUserName;
-    private CircularProgressIndicator progressBar;
+    private ProgressBar progressBar;
     private TextView tvProgressStats;
     private TextView tvKaidahCount;
     private TextView tvQuizCount;
     private TextView tvStatusProgress;
-    private MaterialCardView btnContinueLearning;
-    private MaterialCardView btnStartQuiz;
+    private Button btnContinueLearning;
+    private Button btnStartQuiz;
     private RecyclerView rvRecentKaidah;
 
     // Data
@@ -131,7 +133,7 @@ public class HomeFragment extends Fragment {
             String userName = sessionManager.getUserName();
             if (userName != null) {
                 tvUserName.setText(userName);
-                tvWelcome.setText("Selamat datang, " + sessionManager.getNamaPanggil() + "!");
+                tvWelcome.setText("Selamat datang, " + sessionManager.getUserName() + "!");
             }
         }
     }
@@ -152,13 +154,12 @@ public class HomeFragment extends Fragment {
         Executors.newSingleThreadExecutor().execute(() -> {
             try {
                 // Get total kaidah
-                totalKaidah = database.materiKaidahDao().getTotalCount();
+                totalKaidah = database.materiKaidahDao().getCount();
 
                 // Get completed kaidah for current user
                 int siswaId = sessionManager.getUserId();
-                kaidahSelesai = database.materiKaidahDao().getCountByMateri(
-                    database.riwayatBelajarDao().getMateriSelesai()
-                );
+                // Count completed materi directly
+                kaidahSelesai = database.riwayatBelajarDao().countByStatus("selesai");
 
                 // Get total quiz sessions
                 totalQuiz = database.sesiLatihanDao().getTotalSesiSelesai(siswaId);
@@ -169,16 +170,20 @@ public class HomeFragment extends Fragment {
                 }
 
                 // Get average score
-                Object[] stats = database.sesiLatihanDao().getSesiStatistics(siswaId);
-                float averageScore = stats != null && stats.length >= 4 ? (float) stats[3] : 0.0f;
+                SesiLatihanStatistics stats = database.sesiLatihanDao().getSesiStatistics(siswaId);
+                float averageScore = stats != null ? stats.getRataRataSkor() : 0.0f;
 
                 // Update UI on main thread
-                requireActivity().runOnUiThread(() -> updateProgressUI(averageScore));
+                if (isAdded() && getActivity() != null) {
+                    getActivity().runOnUiThread(() -> updateProgressUI(averageScore));
+                }
 
             } catch (Exception e) {
                 e.printStackTrace();
                 // Handle error
-                requireActivity().runOnUiThread(this::showErrorState);
+                if (isAdded() && getActivity() != null) {
+                    getActivity().runOnUiThread(this::showErrorState);
+                }
             }
         });
     }
@@ -191,7 +196,7 @@ public class HomeFragment extends Fragment {
             try {
                 int siswaId = sessionManager.getUserId();
                 List<MateriKaidah> recentKaidah = database.materiKaidahDao()
-                        .getMateriWithProgress(siswaId);
+                        .getMateriWithProgressSync(siswaId);
 
                 // Limit to 5 most recent
                 if (recentKaidah.size() > 5) {
@@ -200,17 +205,21 @@ public class HomeFragment extends Fragment {
 
                 // Update adapter on main thread
                 List<MateriKaidah> finalRecentKaidah = recentKaidah;
-                requireActivity().runOnUiThread(() -> {
-                    if (finalRecentKaidah != null && !finalRecentKaidah.isEmpty()) {
-                        recentKaidahAdapter.updateData(finalRecentKaidah);
-                    } else {
-                        showEmptyState();
-                    }
-                });
+                if (isAdded() && getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        if (finalRecentKaidah != null && !finalRecentKaidah.isEmpty()) {
+                            recentKaidahAdapter.updateData(finalRecentKaidah);
+                        } else {
+                            showEmptyState();
+                        }
+                    });
+                }
 
             } catch (Exception e) {
                 e.printStackTrace();
-                requireActivity().runOnUiThread(this::showErrorState);
+                if (isAdded() && getActivity() != null) {
+                    getActivity().runOnUiThread(this::showErrorState);
+                }
             }
         });
     }
@@ -223,8 +232,8 @@ public class HomeFragment extends Fragment {
         progressBar.setProgress((int) progressPercentage);
 
         // Update stats text
-        tvKaidah.setText(String.valueOf(totalKaidah));
-        tvQuiz.setText(String.valueOf(totalQuiz));
+        tvKaidahCount.setText(String.valueOf(totalKaidah));
+        tvQuizCount.setText(String.valueOf(totalQuiz));
         tvProgressStats.setText(String.format("%.0f%% selesai", progressPercentage));
 
         // Update status text

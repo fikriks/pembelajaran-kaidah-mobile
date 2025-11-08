@@ -6,9 +6,14 @@ import androidx.room.Delete;
 import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
+import androidx.room.RoomWarnings;
 import androidx.room.Update;
 
 import com.khozin.pembelajarankaidah.data.model.SesiLatihan;
+import com.khozin.pembelajarankaidah.database.entity.SesiLatihanStatistics;
+import com.khozin.pembelajarankaidah.database.entity.SesiPerformaPerMateri;
+import com.khozin.pembelajarankaidah.database.entity.SesiWithMateriInfo;
+import com.khozin.pembelajarankaidah.database.entity.SeedStatistics;
 
 import java.util.List;
 
@@ -191,7 +196,7 @@ public interface SesiLatihanDao {
             "MAX(skor) as skor_tertinggi, " +
             "SUM(durasi_detik) as total_waktu " +
             "FROM sesi_latihan WHERE id_siswa = :siswaId")
-    Object[] getSesiStatistics(int siswaId);
+    SesiLatihanStatistics getSesiStatistics(int siswaId);
 
     /**
      * Get sesi latihan by date range
@@ -217,7 +222,7 @@ public interface SesiLatihanDao {
             "WHERE sl.id_siswa = :siswaId AND sl.status = 'selesai' " +
             "GROUP BY sl.id_materi, mk.judul_kaidah " +
             "ORDER BY rata_rata_skor DESC")
-    List<Object[]> getPerformaPerMateri(int siswaId);
+    List<SesiPerformaPerMateri> getPerformaPerMateri(int siswaId);
 
     /**
      * Get sesi latihan yang perlu diselesaikan (timeout cleanup)
@@ -258,10 +263,11 @@ public interface SesiLatihanDao {
     /**
      * Get sesi dengan materi info
      */
+    @SuppressWarnings(RoomWarnings.CURSOR_MISMATCH)
     @Query("SELECT sl.*, mk.judul_kaidah as materi_judul FROM sesi_latihan sl " +
             "INNER JOIN materi_kaidah mk ON sl.id_materi = mk.id_materi " +
             "WHERE sl.id_siswa = :siswaId ORDER BY sl.id_sesi DESC")
-    List<SesiLatihan> getSesiWithMateriInfo(int siswaId);
+    List<SesiWithMateriInfo> getSesiWithMateriInfo(int siswaId);
 
     /**
      * Get learning streak (consecutive days with completed sessions)
@@ -291,5 +297,5 @@ public interface SesiLatihanDao {
             "MAX(seed_digunakan) as max_seed, " +
             "MIN(seed_digunakan) as min_seed " +
             "FROM sesi_latihan WHERE id_siswa = :siswaId")
-    Object[] getSeedStatistics(int siswaId);
+    SeedStatistics getSeedStatistics(int siswaId);
 }

@@ -99,21 +99,8 @@ public class KaidahSmallAdapter extends RecyclerView.Adapter<KaidahSmallAdapter.
                 tvStatus.setText("Selesai");
             }
 
-            // Set icon berdasarkan tingkat kesulitan
-            switch (kaidah.getTingkatKesulitan()) {
-                case "mudah":
-                    ivKaidahIcon.setImageResource(R.drawable.ic_easy);
-                    break;
-                case "sedang":
-                    ivKaidahIcon.setImageResource(R.drawable.ic_medium);
-                    break;
-                case "sulit":
-                    ivKaidahIcon.setImageResource(R.drawable.ic_hard);
-                    break;
-                default:
-                    ivKaidahIcon.setImageResource(R.drawable.ic_book);
-                    break;
-            }
+            // Set default icon for all kaidah
+            ivKaidahIcon.setImageResource(R.drawable.ic_book);
 
             // Set click listener
             rootView.setOnClickListener(v -> {

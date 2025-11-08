@@ -8,9 +8,16 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
 
 import com.khozin.pembelajarankaidah.data.repository.LoginRepository;
 import com.khozin.pembelajarankaidah.utils.SessionManager;
+import com.khozin.pembelajarankaidah.ui.home.HomeFragment;
+import com.khozin.pembelajarankaidah.ui.kaidah.KaidahListFragment;
+import com.khozin.pembelajarankaidah.ui.quiz.QuizFragment;
+import com.khozin.pembelajarankaidah.ui.progress.ProgressFragment;
+import com.khozin.pembelajarankaidah.ui.profile.ProfileFragment;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 /**
@@ -73,29 +80,42 @@ public class MainActivity extends AppCompatActivity {
         if (bottomNavigation != null) {
             bottomNavigation.setOnItemSelectedListener(item -> {
                 int itemId = item.getItemId();
+                Fragment selectedFragment = null;
 
                 if (itemId == R.id.navigation_home) {
-                    // Home fragment
-                    return true;
+                    selectedFragment = new HomeFragment();
                 } else if (itemId == R.id.navigation_kaidah) {
-                    // Kaidah list fragment
-                    return true;
+                    selectedFragment = new KaidahListFragment();
                 } else if (itemId == R.id.navigation_quiz) {
-                    // Quiz fragment
-                    return true;
+                    selectedFragment = new QuizFragment();
                 } else if (itemId == R.id.navigation_progress) {
-                    // Progress fragment
-                    return true;
+                    selectedFragment = new ProgressFragment();
                 } else if (itemId == R.id.navigation_profile) {
-                    // Profile fragment
+                    selectedFragment = new ProfileFragment();
+                }
+
+                if (selectedFragment != null) {
+                    loadFragment(selectedFragment);
                     return true;
                 }
 
                 return false;
             });
 
-            // Set default selection
+            // Load default fragment (Home)
+            loadFragment(new HomeFragment());
             bottomNavigation.setSelectedItemId(R.id.navigation_home);
+        }
+    }
+
+    /**
+     * Load fragment into container
+     */
+    private void loadFragment(Fragment fragment) {
+        if (fragment != null) {
+            FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+            transaction.replace(R.id.fragment_container, fragment);
+            transaction.commit();
         }
     }
 

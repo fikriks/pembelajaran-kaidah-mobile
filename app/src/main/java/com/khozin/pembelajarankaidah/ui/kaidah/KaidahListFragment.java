@@ -1,10 +1,11 @@
 package com.khozin.pembelajarankaidah.ui.kaidah;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.SearchView;
+import androidx.appcompat.widget.SearchView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -17,10 +18,17 @@ import com.google.android.material.progressindicator.CircularProgressIndicator;
 import com.khozin.pembelajarankaidah.R;
 import com.khozin.pembelajarankaidah.adapter.KaidahAdapter;
 import com.khozin.pembelajarankaidah.data.model.MateriKaidah;
+import com.khozin.pembelajarankaidah.data.model.ApiResponse;
+import com.khozin.pembelajarankaidah.data.model.KaidahListResponse;
 import com.khozin.pembelajarankaidah.database.AppDatabase;
 import com.khozin.pembelajarankaidah.utils.SessionManager;
+import com.khozin.pembelajarankaidah.data.remote.ApiService;
+import com.khozin.pembelajarankaidah.network.RetrofitClient;
 import java.util.List;
 import java.util.concurrent.Executors;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 /**
  * Fragment untuk menampilkan daftar materi kaidah
@@ -39,6 +47,7 @@ public class KaidahListFragment extends Fragment {
     private SessionManager sessionManager;
     private KaidahAdapter kaidahAdapter;
     private KaidahViewModel viewModel;
+    private ApiService apiService;
 
     // Filter states
     private String currentFilter = "all"; // all, belum, sedang, selesai
@@ -84,6 +93,7 @@ public class KaidahListFragment extends Fragment {
     private void setupDatabase() {
         sessionManager = new SessionManager(requireContext());
         database = AppDatabase.getDatabase(requireContext());
+        apiService = RetrofitClient.getInstance().getRetrofit().create(ApiService.class);
     }
 
     /**
@@ -178,46 +188,162 @@ public class KaidahListFragment extends Fragment {
      * Load kaidah data from database
      */
     private void loadKaidahData() {
+        Log.d("KAIDAH_DEBUG", "Loading kaidah data...");
         showLoading();
 
         Executors.newSingleThreadExecutor().execute(() -> {
             try {
                 int siswaId = sessionManager.getUserId();
+                Log.d("KAIDAH_DEBUG", "Student ID: " + siswaId);
+
+                // Check if database is empty, if so sync from API first
+                int localKaidahCount = database.materiKaidahDao().getCount();
+                Log.d("KAIDAH_DEBUG", "Local kaidah count: " + localKaidahCount);
+
+                if (localKaidahCount == 0) {
+                    Log.d("KAIDAH_DEBUG", "Database empty, syncing from API...");
+                    if (isAdded() && getActivity() != null) {
+                        getActivity().runOnUiThread(() -> {
+                            syncKaidahFromAPI();
+                        });
+                    }
+                    return; // loadKaidahData will be called again after sync completes
+                }
+
                 List<MateriKaidah> kaidahList;
 
                 switch (currentFilter) {
                     case "belum":
-                        kaidahList = database.materiKaidahDao().getMateriBelumDimulai(siswaId);
+                        Log.d("KAIDAH_DEBUG", "Filter: belum dimulai");
+                        kaidahList = database.materiKaidahDao().getMateriBelumDimulaiSync(siswaId);
                         break;
                     case "sedang":
-                        kaidahList = database.materiKaidahDao().getMateriSedangBelajar(siswaId);
+                        Log.d("KAIDAH_DEBUG", "Filter: sedang belajar");
+                        kaidahList = database.materiKaidahDao().getMateriSedangBelajarSync(siswaId);
                         break;
                     case "selesai":
-                        kaidahList = database.materiKaidahDao().getMateriSelesai(siswaId);
+                        Log.d("KAIDAH_DEBUG", "Filter: selesai");
+                        kaidahList = database.materiKaidahDao().getMateriSelesaiSync(siswaId);
                         break;
                     default: // all
-                        kaidahList = database.materiKaidahDao().getMateriWithProgress(siswaId);
+                        Log.d("KAIDAH_DEBUG", "Filter: all");
+                        kaidahList = database.materiKaidahDao().getMateriWithProgressSync(siswaId);
                         break;
                 }
+
+                Log.d("KAIDAH_DEBUG", "Total kaidah loaded: " + (kaidahList != null ? kaidahList.size() : 0));
 
                 // Apply search filter
                 if (!currentSearch.isEmpty()) {
                     kaidahList = filterBySearch(kaidahList, currentSearch);
+                    Log.d("KAIDAH_DEBUG", "After search filter: " + kaidahList.size());
                 }
 
                 // Update UI on main thread
                 List<MateriKaidah> finalKaidahList = kaidahList;
-                requireActivity().runOnUiThread(() -> {
-                    kaidahAdapter.updateData(finalKaidahList);
-                    hideLoading();
-                });
+                if (isAdded() && getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        kaidahAdapter.updateData(finalKaidahList);
+                        hideLoading();
+                        Log.d("KAIDAH_DEBUG", "UI updated successfully");
+                    });
+                }
 
             } catch (Exception e) {
-                e.printStackTrace();
-                requireActivity().runOnUiThread(() -> {
-                    Toast.makeText(getContext(), "Error loading data: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    hideLoading();
-                });
+                Log.e("KAIDAH_DEBUG", "Error loading kaidah data", e);
+                if (isAdded() && getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        Toast.makeText(getContext(), "Error loading data: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        hideLoading();
+                    });
+                }
+            }
+        });
+    }
+
+    /**
+     * Sync kaidah data from API
+     */
+    private void syncKaidahFromAPI() {
+        Log.d("KAIDAH_DEBUG", "Syncing kaidah from API...");
+
+        String sessionToken = sessionManager.getAuthToken();
+        if (sessionToken == null || sessionToken.isEmpty()) {
+            Log.e("KAIDAH_DEBUG", "No session token found");
+            return;
+        }
+
+        // Gunakan API method dengan wrapper yang sesuai struktur response
+        apiService.getKaidahListWithWrapper().enqueue(new Callback<KaidahListResponse>() {
+            @Override
+            public void onResponse(Call<KaidahListResponse> call, Response<KaidahListResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    KaidahListResponse kaidahResponse = response.body();
+                    if (kaidahResponse.isSuccess() && kaidahResponse.getKaidahList() != null) {
+                        List<MateriKaidah> kaidahList = kaidahResponse.getKaidahList();
+                        Log.d("KAIDAH_DEBUG", "API returned " + kaidahList.size() + " kaidah items");
+
+                        // Save to database on background thread
+                        Executors.newSingleThreadExecutor().execute(() -> {
+                            try {
+                                // Clear existing data
+                                database.materiKaidahDao().deleteAll();
+
+                                // Insert new data
+                                for (MateriKaidah kaidah : kaidahList) {
+                                    // Convert API response to database entity
+                                    MateriKaidah entity = new MateriKaidah();
+
+                                    entity.setIdMateri(kaidah.getIdMateri());
+                                    entity.setJudulKaidah(kaidah.getJudulKaidah());
+                                    entity.setDeskripsi(kaidah.getDeskripsi());
+                                    entity.setPenjelasan(kaidah.getPenjelasan());
+                                    entity.setContoh(kaidah.getContoh());
+                                    entity.setUrutan(kaidah.getUrutan());
+                                    entity.setDibuatOleh(kaidah.getDibuatOleh());
+
+                                    database.materiKaidahDao().insert(entity);
+                                }
+
+                                Log.d("KAIDAH_DEBUG", "Successfully saved " + kaidahList.size() + " kaidah to database");
+
+                                // Reload data from local database
+                                if (isAdded() && getActivity() != null) {
+                                    getActivity().runOnUiThread(() -> {
+                                        loadKaidahData();
+                                    });
+                                }
+
+                            } catch (Exception e) {
+                                Log.e("KAIDAH_DEBUG", "Error saving kaidah to database", e);
+                                if (isAdded() && getActivity() != null) {
+                                    getActivity().runOnUiThread(() -> {
+                                        Toast.makeText(getContext(), "Error saving data: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                    });
+                                }
+                            }
+                        });
+
+                    } else {
+                        Log.e("KAIDAH_DEBUG", "API response not successful: " + kaidahResponse.getMessage());
+                        if (isAdded() && getActivity() != null) {
+                            Toast.makeText(getContext(), kaidahResponse.getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                } else {
+                    Log.e("KAIDAH_DEBUG", "API call failed: " + response.code());
+                    if (isAdded() && getActivity() != null) {
+                        Toast.makeText(getContext(), "API Error: " + response.code(), Toast.LENGTH_SHORT).show();
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Call<KaidahListResponse> call, Throwable t) {
+                Log.e("KAIDAH_DEBUG", "API call failed", t);
+                if (isAdded() && getActivity() != null) {
+                    Toast.makeText(getContext(), "Network Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                }
             }
         });
     }

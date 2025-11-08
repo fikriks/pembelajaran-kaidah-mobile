@@ -6,6 +6,7 @@ import com.khozin.pembelajarankaidah.data.model.Siswa;
 import com.khozin.pembelajarankaidah.data.model.MateriKaidah;
 import com.khozin.pembelajarankaidah.data.model.SesiLatihan;
 import com.khozin.pembelajarankaidah.data.model.RiwayatBelajar;
+import com.khozin.pembelajarankaidah.data.model.KaidahListResponse;
 import com.khozin.pembelajarankaidah.network.ApiConstants;
 
 import java.util.List;
@@ -44,20 +45,23 @@ public interface ApiService {
     // ===================
 
     @GET(ApiConstants.KAIDAH_LIST)
-    Call<ApiResponse<List<MateriKaidah>>> getKaidahList(
-            
-    );
+    Call<ApiResponse<List<MateriKaidah>>> getKaidahList();
+
+    /**
+     * Get kaidah list dengan response wrapper yang sesuai struktur API
+     * Untuk menghandle response { data: { kaidah: [...] } }
+     */
+    @GET(ApiConstants.KAIDAH_LIST)
+    Call<KaidahListResponse> getKaidahListWithWrapper();
 
     @GET(ApiConstants.KAIDAH_DETAIL)
     Call<ApiResponse<MateriKaidah>> getKaidahDetail(
-            @Path("id") int kaidahId,
-            
+            @Path("id") int kaidahId
     );
 
     @GET(ApiConstants.KAIDAH_PROGRESS)
     Call<ApiResponse<RiwayatBelajar>> getKaidahProgress(
-            @Path("id") int kaidahId,
-            
+            @Path("id") int kaidahId
     );
 
     // ===================
@@ -66,38 +70,31 @@ public interface ApiService {
 
     @POST(ApiConstants.SESI_START)
     Call<ApiResponse<SesiLatihan>> startSesi(
-            @Body Map<String, Object> sesiRequest,
-            
+            @Body Map<String, Object> sesiRequest
     );
 
     @GET(ApiConstants.SESI_ACTIVE)
-    Call<ApiResponse<Map<String, Object>>> getActiveSesi(
-            
-    );
+    Call<ApiResponse<Map<String, Object>>> getActiveSesi();
 
     @GET(ApiConstants.SESI_DETAIL)
     Call<ApiResponse<SesiLatihan>> getSesiDetail(
-            @Path("id") int sesiId,
-            
+            @Path("id") int sesiId
     );
 
     @POST(ApiConstants.SESI_JAWAB)
     Call<ApiResponse<Map<String, Object>>> submitJawaban(
             @Path("id") int sesiId,
-            @Body Map<String, Object> jawabanRequest,
-            
+            @Body Map<String, Object> jawabanRequest
     );
 
     @POST(ApiConstants.SESI_FINISH)
     Call<ApiResponse<SesiLatihan>> finishSesi(
-            @Path("id") int sesiId,
-            
+            @Path("id") int sesiId
     );
 
     @GET(ApiConstants.SESI_HASIL)
     Call<ApiResponse<Map<String, Object>>> getHasilSesi(
-            @Path("id") int sesiId,
-            
+            @Path("id") int sesiId
     );
 
     // ===================
@@ -105,21 +102,16 @@ public interface ApiService {
     // ===================
 
     @GET(ApiConstants.PROGRESS_LIST)
-    Call<ApiResponse<List<RiwayatBelajar>>> getProgressList(
-            
-    );
+    Call<ApiResponse<List<RiwayatBelajar>>> getProgressList();
 
     @GET(ApiConstants.HISTORY_LIST)
     Call<ApiResponse<List<SesiLatihan>>> getHistoryList(
             @Query("limit") int limit,
-            @Query("offset") int offset,
-            
+            @Query("offset") int offset
     );
 
     @GET(ApiConstants.STATISTIK)
-    Call<ApiResponse<Map<String, Object>>> getStatistik(
-            
-    );
+    Call<ApiResponse<Map<String, Object>>> getStatistik();
 
     // ===================
     // UTILITY METHODS
@@ -136,8 +128,7 @@ public interface ApiService {
      */
     @POST("device/update")
     Call<ApiResponse<Map<String, String>>> updateDeviceInfo(
-            @Body Map<String, String> deviceInfo,
-            
+            @Body Map<String, String> deviceInfo
     );
 
     /**

@@ -1,6 +1,7 @@
 package com.khozin.pembelajarankaidah.data.repository;
 
 import android.content.Context;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -85,27 +86,57 @@ public class LoginRepository {
      */
     private void handleLoginSuccess(@NonNull ApiResponse<LoginResponse> apiResponse,
                                    @NonNull LoginCallback callback) {
+        Log.d("REPO_DEBUG", "=== RESPONSE ANALYSIS ===");
+        Log.d("REPO_DEBUG", "Raw response: " + apiResponse.toString());
+        Log.d("REPO_DEBUG", "Status: " + apiResponse.getStatus());
+        Log.d("REPO_DEBUG", "Message: " + apiResponse.getMessage());
+        Log.d("REPO_DEBUG", "Code: " + apiResponse.getCode());
+        Log.d("REPO_DEBUG", "isSuccess(): " + apiResponse.isSuccess());
+        Log.d("REPO_DEBUG", "hasData(): " + apiResponse.hasData());
+
         if (!apiResponse.isSuccess()) {
+            Log.e("REPO_DEBUG", "API response not success!");
+            Log.e("REPO_DEBUG", "Error message: " + apiResponse.getErrorMessage());
             callback.onError(apiResponse.getErrorMessage());
             return;
         }
 
         LoginResponse loginResponse = apiResponse.getData();
+        Log.d("REPO_DEBUG", "LoginResponse: " + (loginResponse != null ? "NOT NULL" : "NULL"));
+
         if (loginResponse == null || !loginResponse.isValid()) {
+            Log.e("REPO_DEBUG", "LoginResponse invalid or null. Valid: " +
+                              (loginResponse != null ? loginResponse.isValid() : "NULL"));
             callback.onError("Response data tidak valid");
             return;
         }
 
         try {
+            Log.d("REPO_DEBUG", "Creating session for: " + loginResponse.getUserDisplayName());
+
             // Save session
             sessionManager.createLoginSession(loginResponse);
+            Log.d("REPO_DEBUG", "Session saved");
 
-            // Return success
-            callback.onSuccess(loginResponse);
+            // Verify session was saved
+            boolean isSessionSaved = sessionManager.isLoggedIn();
+            Log.d("REPO_DEBUG", "Session verification: " + isSessionSaved);
+
+            if (isSessionSaved) {
+                Log.d("REPO_DEBUG", "Calling onSuccess callback...");
+                callback.onSuccess(loginResponse);
+                Log.d("REPO_DEBUG", "onSuccess callback called");
+            } else {
+                Log.e("REPO_DEBUG", "Session creation failed!");
+                callback.onError("Sesi login gagal disimpan");
+            }
 
         } catch (Exception e) {
+            Log.e("REPO_DEBUG", "Exception: " + e.getMessage(), e);
             callback.onError("Gagal menyimpan session: " + e.getMessage());
         }
+
+        android.util.Log.d("LoginRepository", "=== LOGIN SUCCESS DEBUG END ===");
     }
 
     /**

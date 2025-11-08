@@ -6,9 +6,15 @@ import androidx.room.Delete;
 import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
+import androidx.room.RoomWarnings;
 import androidx.room.Update;
 
 import com.khozin.pembelajarankaidah.data.model.DetailJawabanSiswa;
+import com.khozin.pembelajarankaidah.database.entity.DetailJawabanStatistics;
+import com.khozin.pembelajarankaidah.database.entity.DetailPerformaPerMateri;
+import com.khozin.pembelajarankaidah.database.entity.JawabanSeringSalah;
+import com.khozin.pembelajarankaidah.database.entity.AnalyticsByDate;
+import com.khozin.pembelajarankaidah.database.entity.DetailJawabanUnikStats;
 
 import java.util.List;
 
@@ -70,7 +76,9 @@ public interface DetailJawabanSiswaDao {
     /**
      * Get detail jawaban by siswa ID
      */
-    @Query("SELECT * FROM detail_jawaban_siswa WHERE id_siswa = :siswaId ORDER BY waktu_jawab DESC")
+    @Query("SELECT djs.* FROM detail_jawaban_siswa djs " +
+            "INNER JOIN sesi_latihan sl ON djs.id_sesi = sl.id_sesi " +
+            "WHERE sl.id_siswa = :siswaId ORDER BY djs.waktu_jawab DESC")
     LiveData<List<DetailJawabanSiswa>> getBySiswaId(int siswaId);
 
     /**
@@ -112,7 +120,9 @@ public interface DetailJawabanSiswaDao {
     /**
      * Get count by siswa ID
      */
-    @Query("SELECT COUNT(*) FROM detail_jawaban_siswa WHERE id_siswa = :siswaId")
+    @Query("SELECT COUNT(*) FROM detail_jawaban_siswa djs " +
+            "INNER JOIN sesi_latihan sl ON djs.id_sesi = sl.id_sesi " +
+            "WHERE sl.id_siswa = :siswaId")
     int getCountBySiswa(int siswaId);
 
     /**
@@ -190,7 +200,8 @@ public interface DetailJawabanSiswaDao {
     /**
      * Delete detail jawaban by siswa ID
      */
-    @Query("DELETE FROM detail_jawaban_siswa WHERE id_siswa = :siswaId")
+    @Query("DELETE FROM detail_jawaban_siswa WHERE id_sesi IN " +
+            "(SELECT id_sesi FROM sesi_latihan WHERE id_siswa = :siswaId)")
     int deleteBySiswaId(int siswaId);
 
     /**
@@ -208,8 +219,10 @@ public interface DetailJawabanSiswaDao {
             "COUNT(CASE WHEN is_benar = 0 THEN 1 END) as jawaban_salah, " +
             "AVG(waktu_respons_detik) as rata_rata_waktu, " +
             "COUNT(CASE WHEN is_reviewed = 1 THEN 1 END) as sudah_review " +
-            "FROM detail_jawaban_siswa WHERE id_siswa = :siswaId")
-    Object[] getStatisticsBySiswa(int siswaId);
+            "FROM detail_jawaban_siswa djs " +
+            "INNER JOIN sesi_latihan sl ON djs.id_sesi = sl.id_sesi " +
+            "WHERE sl.id_siswa = :siswaId")
+    DetailJawabanStatistics getStatisticsBySiswa(int siswaId);
 
     /**
      * Get performance per materi
@@ -225,7 +238,7 @@ public interface DetailJawabanSiswaDao {
             "WHERE sl.id_siswa = :siswaId " +
             "GROUP BY mk.id_materi, mk.judul_kaidah " +
             "ORDER BY benar_rate DESC")
-    List<Object[]> getPerformaPerMateri(int siswaId);
+    List<DetailPerformaPerMateri> getPerformaPerMateri(int siswaId);
 
     /**
      * Get detail jawaban untuk export
@@ -242,6 +255,7 @@ public interface DetailJawabanSiswaDao {
     /**
      * Get detail jawaban dengan informasi lengkap
      */
+    @SuppressWarnings(RoomWarnings.CURSOR_MISMATCH)
     @Query("SELECT djs.*, s.pertanyaan as soal_pertanyaan, j.jawaban as jawaban_text, " +
             "CASE WHEN j.is_benar = 1 THEN 'Benar' ELSE 'Salah' END as kunci_jawaban " +
             "FROM detail_jawaban_siswa djs " +
@@ -270,7 +284,7 @@ public interface DetailJawabanSiswaDao {
             "GROUP BY j.id_pilihan, j.jawaban " +
             "ORDER BY salah_count DESC " +
             "LIMIT :limit")
-    List<Object[]> getJawabanSeringSalah(int limit);
+    List<JawabanSeringSalah> getJawabanSeringSalah(int limit);
 
     /**
      * Update waktu respons
@@ -287,6 +301,7 @@ public interface DetailJawabanSiswaDao {
     /**
      * Get detail jawaban dengan soal info
      */
+    @SuppressWarnings(RoomWarnings.CURSOR_MISMATCH)
     @Query("SELECT djs.*, s.pertanyaan, s.tingkat_kesulitan, s.poin " +
             "FROM detail_jawaban_siswa djs " +
             "INNER JOIN soal s ON djs.id_soal = s.id_soal " +
@@ -296,6 +311,7 @@ public interface DetailJawabanSiswaDao {
     /**
      * Get detail jawaban untuk LCM analysis
      */
+    @SuppressWarnings(RoomWarnings.CURSOR_MISMATCH)
     @Query("SELECT djs.*, sl.seed_digunakan " +
             "FROM detail_jawaban_siswa djs " +
             "INNER JOIN sesi_latihan sl ON djs.id_sesi = sl.id_sesi " +
@@ -307,15 +323,16 @@ public interface DetailJawabanSiswaDao {
      * Get detail jawaban untuk analytics
      */
     @Query("SELECT " +
-            "DATE(waktu_jawab/1000, 'unixepoch') as tanggal, " +
+            "DATE(djs.waktu_jawab/1000, 'unixepoch') as tanggal, " +
             "COUNT(*) as total_jawaban, " +
-            "COUNT(CASE WHEN is_benar = 1 THEN 1 END) as jawaban_benar, " +
-            "AVG(waktu_respons_detik) as rata_waktu " +
-            "FROM detail_jawaban_siswa " +
-            "WHERE id_siswa = :siswaId " +
-            "GROUP BY DATE(waktu_jawab/1000, 'unixepoch') " +
+            "COUNT(CASE WHEN djs.is_benar = 1 THEN 1 END) as jawaban_benar, " +
+            "AVG(djs.waktu_respons_detik) as rata_waktu " +
+            "FROM detail_jawaban_siswa djs " +
+            "INNER JOIN sesi_latihan sl ON djs.id_sesi = sl.id_sesi " +
+            "WHERE sl.id_siswa = :siswaId " +
+            "GROUP BY DATE(djs.waktu_jawab/1000, 'unixepoch') " +
             "ORDER BY tanggal DESC")
-    List<Object[]> getAnalyticsByDate(int siswaId);
+    List<AnalyticsByDate> getAnalyticsByDate(int siswaId);
 
     /**
      * Clean up old detail jawaban
@@ -326,12 +343,16 @@ public interface DetailJawabanSiswaDao {
     /**
      * Get detail jawaban unik per soal
      */
-    @Query("SELECT COUNT(DISTINCT id_soal) as unique_soal, COUNT(*) as total_jawaban FROM detail_jawaban_siswa WHERE id_siswa = :siswaId")
-    Object[] getJawabanUnikStats(int siswaId);
+    @Query("SELECT COUNT(DISTINCT djs.id_soal) as unique_soal, COUNT(*) as total_jawaban " +
+            "FROM detail_jawaban_siswa djs " +
+            "INNER JOIN sesi_latihan sl ON djs.id_sesi = sl.id_sesi " +
+            "WHERE sl.id_siswa = :siswaId")
+    DetailJawabanUnikStats getJawabanUnikStats(int siswaId);
 
     /**
      * Get detail jawaban dengan performa metrics
      */
+    @SuppressWarnings(RoomWarnings.CURSOR_MISMATCH)
     @Query("SELECT djs.*, " +
             "CASE WHEN djs.is_benar = 1 THEN 1 ELSE 0 END as skor, " +
             "djs.waktu_respons_detik as waktu " +
