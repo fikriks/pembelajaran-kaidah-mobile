@@ -414,6 +414,13 @@ public interface RiwayatBelajarDao {
     List<RiwayatBelajar> getRiwayatWithLastActivity(int siswaId);
 
     /**
+     * Get completed kaidah by siswa ID
+     * Mengembalikan daftar kaidah yang sudah selesai (status = 'selesai')
+     */
+    @Query("SELECT * FROM riwayat_belajar WHERE id_siswa = :siswaId AND status = 'selesai'")
+    List<RiwayatBelajar> getCompletedKaidahBySiswa(int siswaId);
+
+    /**
      * Debug: Get count of existing riwayat
      */
     @Query("SELECT COUNT(*) FROM riwayat_belajar")

@@ -70,12 +70,23 @@ public class QuizActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_quiz);
 
-        // Get data from intent
+        // Get data from intent - support both old and new format
         int kaidahId = getIntent().getIntExtra("kaidah_id", 0);
+        int babId = getIntent().getIntExtra("bab_id", 0);
+        String babName = getIntent().getStringExtra("bab_name");
+        int babUrutan = getIntent().getIntExtra("bab_urutan", 0);
         totalQuestions = getIntent().getIntExtra("total_questions", 10);
 
+        // Prioritize bab_id over kaidah_id (new format)
+        if (babId != 0) {
+            kaidahId = babId;
+            android.util.Log.d("QuizActivity", "Starting quiz for bab: " + babName + " (ID: " + babId + ")");
+        } else {
+            android.util.Log.d("QuizActivity", "Starting quiz for kaidah ID: " + kaidahId);
+        }
+
         if (kaidahId == 0) {
-            Toast.makeText(this, "Error: Materi tidak ditemukan", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Error: Bab/Materi tidak ditemukan", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
@@ -175,8 +186,8 @@ public class QuizActivity extends AppCompatActivity {
     private void startQuizSession(int kaidahId) {
         Executors.newSingleThreadExecutor().execute(() -> {
             try {
-                // Get all soal untuk kaidah ini
-                List<Soal> allSoal = database.soalDao().getByMateriIdSync(kaidahId);
+                // Get all soal untuk bab ini
+                List<Soal> allSoal = database.soalDao().getByBabIdSync(kaidahId);
 
                 if (allSoal.isEmpty()) {
                     runOnUiThread(() -> {
@@ -198,7 +209,7 @@ public class QuizActivity extends AppCompatActivity {
                 // Create sesi latihan
                 currentSesi = new SesiLatihan();
                 currentSesi.setIdSiswa(sessionManager.getUserId());
-                currentSesi.setIdMateri(kaidahId);
+                currentSesi.setIdBab(kaidahId);
                 currentSesi.setSeedDigunakan(lcmSeed);
                 currentSesi.setTotalSoal(soalList.size());
                 currentSesi.setSoalBenar(0);

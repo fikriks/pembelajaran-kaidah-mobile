@@ -26,6 +26,7 @@ public class ApiConstants {
     public static final String KAIDAH_DETAIL = "kaidah/{id}";
     public static final String KAIDAH_PROGRESS = "kaidah/{id}/progress";
     public static final String KAIDAH_GROUPED = "kaidah/grouped";
+    public static final String KAIDAH_FIRST_BY_BAB = "kaidah/first/{babId}";
     public static final String MATERI_COMPLETE = "progress/materi/{id}/complete";
 
     public static final String SESI_START = "sesi/start";

@@ -10,8 +10,8 @@ public class SoalWithJawabanCount {
     @ColumnInfo(name = "id_soal")
     public int idSoal;
 
-    @ColumnInfo(name = "id_materi")
-    public int idMateri;
+    @ColumnInfo(name = "id_bab")
+    public int idBab;
 
     @ColumnInfo(name = "pertanyaan")
     public String pertanyaan;

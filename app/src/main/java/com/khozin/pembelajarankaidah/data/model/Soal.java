@@ -18,12 +18,12 @@ import java.util.List;
  */
 @Entity(tableName = "soal",
         indices = {
-            @Index(value = {"id_materi"}),
-            @Index(value = {"id_materi", "tingkat_kesulitan"})
+            @Index(value = {"id_bab"}),
+            @Index(value = {"id_bab", "tingkat_kesulitan"})
         },
-        foreignKeys = @ForeignKey(entity = MateriKaidah.class,
-                parentColumns = "id_materi",
-                childColumns = "id_materi",
+        foreignKeys = @ForeignKey(entity = Bab.class,
+                parentColumns = "id_bab",
+                childColumns = "id_bab",
                 onDelete = ForeignKey.CASCADE))
 public class Soal {
 
@@ -31,8 +31,8 @@ public class Soal {
     @ColumnInfo(name = "id_soal")
     private int idSoal;
 
-    @ColumnInfo(name = "id_materi")
-    private int idMateri;
+    @ColumnInfo(name = "id_bab")
+    private int idBab;
 
     @SerializedName("pertanyaan")
     @NonNull
@@ -86,8 +86,8 @@ public class Soal {
 
     // Constructor minimal
     @Ignore
-    public Soal(int idMateri, String pertanyaan, String tingkatKesulitan, int poin) {
-        this.idMateri = idMateri;
+    public Soal(int idBab, String pertanyaan, String tingkatKesulitan, int poin) {
+        this.idBab = idBab;
         this.pertanyaan = pertanyaan;
         this.tingkatKesulitan = tingkatKesulitan;
         this.poin = poin;
@@ -103,12 +103,12 @@ public class Soal {
         this.idSoal = idSoal;
     }
 
-    public int getIdMateri() {
-        return idMateri;
+    public int getIdBab() {
+        return idBab;
     }
 
-    public void setIdMateri(int idMateri) {
-        this.idMateri = idMateri;
+    public void setIdBab(int idBab) {
+        this.idBab = idBab;
     }
 
     @NonNull
@@ -286,7 +286,7 @@ public class Soal {
     public String toString() {
         return "Soal{" +
                 "idSoal=" + idSoal +
-                ", idMateri=" + idMateri +
+                ", idBab=" + idBab +
                 ", pertanyaan='" + pertanyaan + '\'' +
                 ", tingkatKesulitan='" + tingkatKesulitan + '\'' +
                 ", poin=" + poin +

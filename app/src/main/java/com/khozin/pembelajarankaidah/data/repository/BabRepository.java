@@ -82,10 +82,10 @@ public class BabRepository {
     /**
      * Load chapters from API
      */
-    public void loadChaptersFromApi() {
+    public void loadChaptersFromApi(String authToken) {
         loadingLiveData.setValue(true);
 
-        apiService.getChapters().enqueue(new Callback<BabListResponse>() {
+        apiService.getChapters("Bearer " + authToken).enqueue(new Callback<BabListResponse>() {
             @Override
             public void onResponse(Call<BabListResponse> call, Response<BabListResponse> response) {
                 loadingLiveData.setValue(false);
@@ -93,7 +93,7 @@ public class BabRepository {
                 if (response.isSuccessful() && response.body() != null) {
                     BabListResponse babResponse = response.body();
                     if (babResponse.isSuccess()) {
-                        List<Bab> chapters = babResponse.getData();
+                        List<Bab> chapters = babResponse.getData().getChapters();
                         chaptersLiveData.setValue(chapters);
 
                         // Save to local database in background
@@ -118,10 +118,10 @@ public class BabRepository {
     /**
      * Load progress overview from API
      */
-    public void loadProgressOverview() {
+    public void loadProgressOverview(String authToken) {
         loadingLiveData.setValue(true);
 
-        apiService.getProgressOverview().enqueue(new Callback<ChapterProgressResponse>() {
+        apiService.getProgressOverview("Bearer " + authToken).enqueue(new Callback<ChapterProgressResponse>() {
             @Override
             public void onResponse(Call<ChapterProgressResponse> call, Response<ChapterProgressResponse> response) {
                 loadingLiveData.setValue(false);
@@ -281,9 +281,9 @@ public class BabRepository {
     /**
      * Refresh chapters from API
      */
-    public void refreshChapters() {
-        loadChaptersFromApi();
-        loadProgressOverview();
+    public void refreshChapters(String authToken) {
+        loadChaptersFromApi(authToken);
+        loadProgressOverview(authToken);
     }
 
     /**

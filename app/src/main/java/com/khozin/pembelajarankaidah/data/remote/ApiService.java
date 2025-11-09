@@ -49,7 +49,9 @@ public interface ApiService {
     // ===================
 
     @GET(ApiConstants.BAB_CHAPTERS)
-    Call<BabListResponse> getChapters();
+    Call<BabListResponse> getChapters(
+            @Header("Authorization") String sessionToken
+    );
 
     @GET(ApiConstants.BAB_CHAPTER_DETAIL)
     Call<ApiResponse<Bab>> getChapterDetail(
@@ -57,7 +59,7 @@ public interface ApiService {
     );
 
     @GET(ApiConstants.BAB_PROGRESS_OVERVIEW)
-    Call<ChapterProgressResponse> getProgressOverview();
+    Call<ChapterProgressResponse> getProgressOverview(@Header("Authorization") String sessionToken);
 
     @GET(ApiConstants.BAB_OVERALL_PROGRESS)
     Call<ApiResponse<Map<String, Object>>> getOverallProgress();
@@ -81,6 +83,12 @@ public interface ApiService {
      */
     @GET(ApiConstants.KAIDAH_GROUPED)
     Call<KaidahGroupedResponse> getKaidahGrouped(
+            @Header("Authorization") String sessionToken
+    );
+
+    @GET(ApiConstants.KAIDAH_FIRST_BY_BAB)
+    Call<ApiResponse<MateriKaidah>> getFirstMateriByBab(
+            @Path("babId") int babId,
             @Header("Authorization") String sessionToken
     );
 

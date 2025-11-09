@@ -42,7 +42,7 @@ public class SesiLatihan {
     private int idSiswa;
 
     @ColumnInfo(name = "id_materi")
-    private int idMateri;
+    private int idBab;
 
     @SerializedName("seed_digunakan")
     @ColumnInfo(name = "seed_digunakan")
@@ -80,8 +80,8 @@ public class SesiLatihan {
     private String waktuDibuat;
 
     // Additional fields untuk mobile app
-    @ColumnInfo(name = "materi_judul")
-    private String materiJudul;
+    @ColumnInfo(name = "bab_judul")
+    private String babJudul;
 
     @ColumnInfo(name = "siswa_nama")
     private String siswaNama;
@@ -114,10 +114,10 @@ public class SesiLatihan {
 
     // Constructor untuk membuat sesi baru
     @Ignore
-    public SesiLatihan(int idSiswa, int idMateri, int totalSoal, long seed) {
+    public SesiLatihan(int idSiswa, int idBab, int totalSoal, long seed) {
         this();
         this.idSiswa = idSiswa;
-        this.idMateri = idMateri;
+        this.idBab = idBab;
         this.totalSoal = totalSoal;
         this.seedDigunakan = seed;
         this.waktuMulai = getCurrentTimestamp();
@@ -141,12 +141,12 @@ public class SesiLatihan {
         this.idSiswa = idSiswa;
     }
 
-    public int getIdMateri() {
-        return idMateri;
+    public int getIdBab() {
+        return idBab;
     }
 
-    public void setIdMateri(int idMateri) {
-        this.idMateri = idMateri;
+    public void setIdBab(int idBab) {
+        this.idBab = idBab;
     }
 
     public long getSeedDigunakan() {
@@ -226,12 +226,12 @@ public class SesiLatihan {
     }
 
     @Nullable
-    public String getMateriJudul() {
-        return materiJudul;
+    public String getBabJudul() {
+        return babJudul;
     }
 
-    public void setMateriJudul(@Nullable String materiJudul) {
-        this.materiJudul = materiJudul;
+    public void setBabJudul(@Nullable String babJudul) {
+        this.babJudul = babJudul;
     }
 
     @Nullable
@@ -277,11 +277,11 @@ public class SesiLatihan {
 
     /**
      * Generate seed untuk LCM algorithm
-     * Formula: timestamp + user_id + materi_id
+     * Formula: timestamp + user_id + bab_id
      */
-    public static long generateSeed(int userId, int materiId) {
+    public static long generateSeed(int userId, int babId) {
         long timestamp = System.currentTimeMillis();
-        return timestamp + userId + materiId;
+        return timestamp + userId + babId;
     }
 
     /**
@@ -417,7 +417,7 @@ public class SesiLatihan {
         return "SesiLatihan{" +
                 "idSesi=" + idSesi +
                 ", idSiswa=" + idSiswa +
-                ", idMateri=" + idMateri +
+                ", idBab=" + idBab +
                 ", seedDigunakan=" + seedDigunakan +
                 ", totalSoal=" + totalSoal +
                 ", soalBenar=" + soalBenar +

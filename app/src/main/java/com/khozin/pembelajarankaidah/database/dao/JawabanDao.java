@@ -301,7 +301,7 @@ public interface JawabanDao {
      */
     @Query("SELECT j.* FROM jawaban j " +
             "INNER JOIN soal s ON j.id_soal = s.id_soal " +
-            "WHERE s.id_materi = :materiId AND j.is_benar = 0 " +
+            "WHERE s.id_bab = :materiId AND j.is_benar = 0 " +
             "ORDER BY RANDOM() LIMIT :limit")
     List<Jawaban> getJawabanSalahAcak(int materiId, int limit);
 

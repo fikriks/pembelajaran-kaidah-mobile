@@ -112,10 +112,12 @@ public interface MateriKaidahDao {
      */
     @SuppressWarnings(RoomWarnings.CURSOR_MISMATCH)
     @Query("SELECT mk.*, " +
-            "CASE WHEN rb.id_riwayat IS NOT NULL THEN rb.persentase_penguasaan ELSE 0 END as progress, " +
-            "CASE WHEN rb.id_riwayat IS NOT NULL THEN rb.status ELSE 'belum_dimulai' END as status_belajar " +
+            "CASE WHEN rb.id_riwayat IS NOT NULL THEN CAST(rb.persentase_penguasaan AS INTEGER) ELSE 0 END as progress_percentage, " +
+            "CASE WHEN rb.id_riwayat IS NOT NULL THEN rb.status ELSE 'belum_dimulai' END as status " +
             "FROM materi_kaidah mk " +
-            "LEFT JOIN riwayat_belajar rb ON mk.id_materi = rb.id_materi AND rb.id_siswa = :siswaId " +
+            "LEFT JOIN riwayat_belajar rb ON mk.id_materi = rb.id_materi AND rb.id_riwayat = (" +
+            "    SELECT MAX(id_riwayat) FROM riwayat_belajar WHERE id_materi = mk.id_materi AND id_siswa = :siswaId" +
+            ") WHERE rb.id_siswa = :siswaId OR rb.id_siswa IS NULL " +
             "ORDER BY mk.urutan ASC")
     LiveData<List<MateriKaidah>> getMateriWithProgress(int siswaId);
 
@@ -124,10 +126,12 @@ public interface MateriKaidahDao {
      */
     @SuppressWarnings(RoomWarnings.CURSOR_MISMATCH)
     @Query("SELECT mk.*, " +
-            "CASE WHEN rb.id_riwayat IS NOT NULL THEN rb.persentase_penguasaan ELSE 0 END as progress, " +
-            "CASE WHEN rb.id_riwayat IS NOT NULL THEN rb.status ELSE 'belum_dimulai' END as status_belajar " +
+            "CASE WHEN rb.id_riwayat IS NOT NULL THEN CAST(rb.persentase_penguasaan AS INTEGER) ELSE 0 END as progress_percentage, " +
+            "CASE WHEN rb.id_riwayat IS NOT NULL THEN rb.status ELSE 'belum_dimulai' END as status " +
             "FROM materi_kaidah mk " +
-            "LEFT JOIN riwayat_belajar rb ON mk.id_materi = rb.id_materi AND rb.id_siswa = :siswaId " +
+            "LEFT JOIN riwayat_belajar rb ON mk.id_materi = rb.id_materi AND rb.id_riwayat = (" +
+            "    SELECT MAX(id_riwayat) FROM riwayat_belajar WHERE id_materi = mk.id_materi AND id_siswa = :siswaId" +
+            ") WHERE rb.id_siswa = :siswaId OR rb.id_siswa IS NULL " +
             "ORDER BY mk.urutan ASC")
     List<MateriKaidah> getMateriWithProgressSync(int siswaId);
 
@@ -243,7 +247,7 @@ public interface MateriKaidahDao {
      */
     @SuppressWarnings(RoomWarnings.CURSOR_MISMATCH)
     @Query("SELECT mk.*, " +
-            "(SELECT COUNT(*) FROM soal s WHERE s.id_materi = mk.id_materi) as soal_count " +
+            "(SELECT COUNT(*) FROM soal s WHERE s.id_bab = mk.id_materi) as soal_count " +
             "FROM materi_kaidah mk " +
             "ORDER BY mk.urutan ASC")
     List<MateriKaidahWithSoalCount> getMateriWithSoalCount();
@@ -296,4 +300,11 @@ public interface MateriKaidahDao {
             "ORDER BY mk.urutan ASC " +
             "LIMIT :limit")
     List<MateriKaidah> getRekomendasiMateri(int siswaId, int limit);
+
+    /**
+     * Get materi by bab ID (sync)
+     * Used for quiz prerequisite checking
+     */
+    @Query("SELECT * FROM materi_kaidah WHERE id_materi = :babId ORDER BY urutan ASC")
+    List<MateriKaidah> getMateriByBabSync(int babId);
 }

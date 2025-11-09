@@ -4855,8 +4855,170 @@ apiService.completeMateri("Bearer " + authToken, materiId);
 
 **Document Information:**
 - **Last Updated:** 9 November 2025
-- **Version:** 2.2
-- **Status:** Progress Tracking System Fully Functional
+- **Version:** 2.3
+- **Status:** Navigation & UI System Fully Functional
 - **Total API Routes:** 11 endpoints
 - **Database Tables:** 6 primary tables seeded
-- **Recent Fixes:** 3 major bugs fixed (Progress calculation, API routing, Authorization)
+- **Recent Fixes:** 6 major improvements (Progress calculation, API routing, Authorization, UI display, Navigation logic, Toast cleanup)
+
+---
+
+### **9 November 2025 - Navigation & UI Display Fixes**
+
+#### **Problem 1: "Materi 1 dari 1" Display Issue on Last Materi** ⭐⭐⭐
+**Symptoms:**
+- Materi terakhir setiap bab menampilkan "Materi 1 dari 1 (bab X)" instead of correct numbering
+- Direct navigation to materi 10 shows wrong display
+- Sequential navigation from materi 9 to 10 shows correct display
+
+**Root Cause Analysis:**
+1. App reading from stale local database (only 2 records: ID=10,20)
+2. Fresh API data (20 materi) not consistently loaded for direct navigation
+3. Cache inconsistency between API responses and local database
+
+**Fixes Applied:**
+
+**A. API-Only Data Loading (`KaidahDetailFragment.java:166-183`)**
+```java
+// Before: Mixed database + API approach
+currentKaidah = database.materiKaidahDao().getById(currentKaidahId);
+
+// After: API-only fresh data
+private void loadKaidahData() {
+    // Always fetch from API to get fresh data (no local database caching)
+    android.util.Log.d("KaidahDetail", "Fetching fresh data from API (no local database)");
+    loadAllKaidahFromAPI(currentKaidahId);
+}
+```
+
+**B. Simplified Navigation Logic (`KaidahDetailFragment.java:1002-1114`)**
+```java
+// Before: Complex database insertion and caching
+List<Long> insertResults = database.materiKaidahDao().insertAll(finalKaidahList);
+
+// After: Immediate UI update with fresh data
+// Update UI immediately with fresh data (no database caching)
+if (isAdded() && getActivity() != null) {
+    getActivity().runOnUiThread(() -> {
+        currentKaidah = finalKaidah;
+        allKaidahList = finalKaidahList;
+        bindData(finalKaidah);
+        updateNavigationInfo();
+    });
+}
+```
+
+**Impact:**
+- ✅ Consistent "Materi 10 dari 10" display for both direct and sequential navigation
+- ✅ No more stale cache issues
+- ✅ Fresh data always loaded from API
+
+#### **Problem 2: Incorrect Next Button Logic for Last Materi** ⭐⭐
+**Symptoms:**
+- Last materi shows "Materi Selanjutnya" instead of "Selesai"
+- Button detection based on overall list instead of per-bab logic
+- Navigation continues to non-existent materi instead of showing congratulations
+
+**Fixes Applied:**
+
+**C. Per-Bab Navigation Detection (`KaidahDetailFragment.java:334-344`)**
+```java
+// Before: Overall list detection
+if (currentKaidahIndex >= allKaidahList.size() - 1) {
+    btnNextMateri.setText("Selesai");
+}
+
+// After: Per-bab detection
+MateriKaidah nextMateriInBab = getNextMateriInSameBab();
+if (nextMateriInBab == null) {
+    // Last materi in current bab - setting next button text to 'Selesai'
+    btnNextMateri.setText("Selesai");
+} else {
+    // Not last materi in current bab - setting next button text to 'Materi Selanjutnya'
+    btnNextMateri.setText("Materi Selanjutnya");
+}
+```
+
+**D. Direct Congratulations Navigation (`KaidahDetailFragment.java:407-442`)**
+```java
+// Before: Complex bab completion checks for last materi
+checkBabCompletionAndNavigate(null);
+
+// After: Direct congratulations for last materi
+// 🎯 LAST MATERI REACHED - Final materi
+markCurrentMateriAsCompleted();
+
+// 🎉 Showing congratulations fragment for LAST MATERI
+showCongratulationsFragment(currentKaidah, nextBab, totalMateri, totalMateri);
+```
+
+**Impact:**
+- ✅ Last materi in each bab shows "Selesai" button
+- ✅ Correct navigation to babcongrats without unnecessary checks
+- ✅ Consistent per-bab navigation behavior
+
+#### **Problem 3: Unnecessary Toast Notifications** ⭐⭐
+**Symptoms:**
+- "Progress berhasil disinkron dengan server" toast appears
+- "Materi 'Judul Materi' telah selesai!" toast appears
+- Duplicate completion notifications when babcongrats already handles it
+
+**Fixes Applied:**
+
+**E. Toast Cleanup (`KaidahDetailFragment.java:1541-1542`, `KaidahDetailFragment.java:1390-1391`)**
+```java
+// Before: Toast notifications
+Toast.makeText(getContext(), "Progress berhasil disinkron dengan server", Toast.LENGTH_SHORT).show();
+Toast.makeText(getContext(), "Materi \"" + currentMateriJudul + "\" telah selesai!", Toast.LENGTH_SHORT).show();
+
+// After: Clean logging without user interruption
+android.util.Log.d("KaidahDetail", "✓ Progress successfully synced with server (no toast)");
+android.util.Log.d("KaidahDetail", "✓ Materi \"" + currentMateriJudul + "\" completed (no toast)");
+```
+
+**Impact:**
+- ✅ Clean user experience without unnecessary notifications
+- ✅ Babcongraps becomes the single source of completion notifications
+- ✅ Consistent notification flow
+
+---
+
+### **Summary of Changes - 9 November 2025 (Updated)**
+
+**Web Backend (CodeIgniter 4):**
+- ✅ `app/Controllers/API/ProgressController.php` - Fixed completion_percentage calculation
+- ✅ `app/Controllers/API/ProgressController.php` - Added kaidah_progress to overview
+- ✅ `app/Controllers/API/KaidahController.php` - Enhanced grouped API with progress data
+
+**Android App (Java):**
+- ✅ `ApiConstants.java` - Fixed double /api prefix
+- ✅ `ApiService.java` - Added Authorization header parameter
+- ✅ `KaidahDetailFragment.java` - Complete navigation logic overhaul
+- ✅ `KaidahDetailFragment.java` - API-only data loading implementation
+- ✅ `KaidahDetailFragment.java` - Per-bab navigation detection
+- ✅ `KaidahDetailFragment.java` - Toast cleanup for better UX
+
+**Results:**
+- 🎯 **Display Accuracy**: Correct "Materi X dari Y" for all materi
+- 🎯 **Navigation Logic**: Proper "Selesai" button for last materi in each bab
+- 🎯 **Clean UX**: No unnecessary toast notifications
+- 🎯 **Fresh Data**: Always up-to-date information from API
+- 🎯 **Consistent Behavior**: Works for both direct and sequential navigation
+
+**Testing Status:**
+- ✅ Materi display shows correct numbering (e.g., "Materi 10 dari 10")
+- ✅ Last materi shows "Selesai" button instead of "Materi Selanjutnya"
+- ✅ Clicking "Selesai" navigates to babcongrats correctly
+- ✅ No unnecessary toast notifications appear
+- ✅ Fresh API data loaded consistently
+- ✅ Both direct navigation and sequential navigation work identically
+
+---
+
+**Document Information:**
+- **Last Updated:** 9 November 2025
+- **Version:** 2.3
+- **Status:** Navigation & UI System Fully Functional
+- **Total API Routes:** 11 endpoints
+- **Database Tables:** 6 primary tables seeded
+- **Recent Fixes:** 6 major improvements (Progress calculation, API routing, Authorization, UI display, Navigation logic, Toast cleanup)

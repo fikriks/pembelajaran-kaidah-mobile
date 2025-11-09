@@ -10,6 +10,9 @@ public class MateriKaidahWithSoalCount {
     @ColumnInfo(name = "id_materi")
     public int idMateri;
 
+    @ColumnInfo(name = "id_bab")
+    public int idBab;
+
     @ColumnInfo(name = "judul_kaidah")
     public String judulKaidah;
 
@@ -44,6 +47,7 @@ public class MateriKaidahWithSoalCount {
     public String toString() {
         return "MateriKaidahWithSoalCount{" +
                 "idMateri=" + idMateri +
+                ", idBab=" + idBab +
                 ", judulKaidah='" + judulKaidah + '\'' +
                 ", soalCount=" + soalCount +
                 '}';

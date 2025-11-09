@@ -4,6 +4,7 @@ import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 import androidx.room.ColumnInfo;
 import androidx.room.Ignore;
+import androidx.room.Index;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.google.gson.annotations.SerializedName;
@@ -13,7 +14,15 @@ import java.io.Serializable;
  * Entity MateriKaidah untuk tabel materi_kaidah
  * Sesuai database schema di CLAUDE.md
  */
-@Entity(tableName = "materi_kaidah")
+@Entity(
+    tableName = "materi_kaidah",
+    indices = {
+        @Index(value = {"id_materi"}, unique = true),
+        @Index(value = {"id_bab"}, unique = true),
+        @Index(value = {"urutan"}),
+        @Index(value = {"id_bab", "urutan"}, unique = true)
+    }
+)
 public class MateriKaidah implements Serializable {
 
     @PrimaryKey(autoGenerate = true)
@@ -45,6 +54,7 @@ public class MateriKaidah implements Serializable {
     @ColumnInfo(name = "contoh")
     private String contoh;
 
+    @SerializedName("urutan")
     @ColumnInfo(name = "urutan")
     private int urutan;
 
@@ -68,6 +78,14 @@ public class MateriKaidah implements Serializable {
 
     @ColumnInfo(name = "progress_percentage")
     private int progressPercentage = 0;
+
+    @SerializedName("status")
+    @ColumnInfo(name = "status")
+    private String status = "belum_dimulai";
+
+    @SerializedName("is_locked")
+    @ColumnInfo(name = "is_locked")
+    private boolean isLocked = false;
 
     // Default constructor
     public MateriKaidah() {
@@ -192,13 +210,19 @@ public class MateriKaidah implements Serializable {
     }
 
     public String getStatus() {
-        if (isCompleted) {
-            return "selesai";
-        } else if (progressPercentage > 0) {
-            return "sedang_belajar";
-        } else {
-            return "belum_dimulai";
-        }
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public boolean isLocked() {
+        return isLocked;
+    }
+
+    public void setLocked(boolean locked) {
+        isLocked = locked;
     }
 
     public float getPersentasePenguasaan() {

@@ -26,7 +26,7 @@ import com.khozin.pembelajarankaidah.data.model.*;
         DetailJawabanSiswa.class,
         RiwayatBelajar.class
     },
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 public abstract class AppDatabase extends RoomDatabase {
@@ -132,7 +132,7 @@ public abstract class AppDatabase extends RoomDatabase {
 
         // MateriKaidah indexes
         db.execSQL("CREATE INDEX IF NOT EXISTS index_materi_kaidah_urutan ON materi_kaidah(urutan)");
-        db.execSQL("CREATE INDEX IF NOT EXISTS index_materi_kaidah_bab ON materi_kaidah(id_bab)");
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_materi_kaidah_materi ON materi_kaidah(id_materi)");
 
         // SesiLatihan indexes
         db.execSQL("CREATE INDEX IF NOT EXISTS index_sesi_siswa ON sesi_latihan(id_siswa)");

@@ -5,6 +5,7 @@ import com.khozin.pembelajarankaidah.data.model.MateriKaidah;
 import com.khozin.pembelajarankaidah.data.model.RiwayatBelajar;
 import com.khozin.pembelajarankaidah.database.dao.RiwayatBelajarDao;
 import com.khozin.pembelajarankaidah.database.AppDatabase;
+import com.khozin.pembelajarankaidah.utils.SessionManager;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -37,13 +38,24 @@ public class BabProgressHelper {
 
         executorService.execute(() -> {
             try {
-                // Untuk demo, gunakan siswa ID 1
-                int siswaId = 1;
+                // Get siswa ID dari SessionManager
+                SessionManager sessionManager = new SessionManager(context);
+                if (!sessionManager.isLoggedIn()) {
+                    callback.onError("User tidak login");
+                    return;
+                }
+
+                int siswaId = sessionManager.getUserId();
+                if (siswaId == -1) {
+                    callback.onError("Invalid siswa ID");
+                    return;
+                }
+
                 int totalMateri = materiList.size();
                 int completedMateri = 0;
 
                 for (MateriKaidah materi : materiList) {
-                    RiwayatBelajar riwayat = riwayatDao.getBySiswaAndMateriSync(siswaId, materi.getIdMateri());
+                    RiwayatBelajar riwayat = riwayatDao.getTerakhirBySiswaAndMateri(siswaId, materi.getIdMateri());
                     if (riwayat != null && riwayat.getStatus().equals(RiwayatBelajar.STATUS_SELESAI)) {
                         completedMateri++;
                     }
@@ -160,13 +172,24 @@ public class BabProgressHelper {
 
         executorService.execute(() -> {
             try {
-                // Untuk demo, gunakan siswa ID 1
-                int siswaId = 1;
+                // Get siswa ID dari SessionManager
+                SessionManager sessionManager = new SessionManager(context);
+                if (!sessionManager.isLoggedIn()) {
+                    callback.onError("User tidak login");
+                    return;
+                }
+
+                int siswaId = sessionManager.getUserId();
+                if (siswaId == -1) {
+                    callback.onError("Invalid siswa ID");
+                    return;
+                }
+
                 int totalMateri = materiList.size();
                 int completedMateri = 0;
 
                 for (MateriKaidah materi : materiList) {
-                    RiwayatBelajar riwayat = riwayatDao.getBySiswaAndMateriSync(siswaId, materi.getIdMateri());
+                    RiwayatBelajar riwayat = riwayatDao.getTerakhirBySiswaAndMateri(siswaId, materi.getIdMateri());
                     if (riwayat != null && riwayat.getStatus().equals(RiwayatBelajar.STATUS_SELESAI)) {
                         completedMateri++;
                     }

@@ -24,6 +24,7 @@ import com.khozin.pembelajarankaidah.data.model.Bab;
 import com.khozin.pembelajarankaidah.data.model.KaidahGroup;
 import com.khozin.pembelajarankaidah.data.model.KaidahListResponse;
 import com.khozin.pembelajarankaidah.data.model.KaidahGroupedResponse;
+import com.khozin.pembelajarankaidah.data.model.ApiResponse;
 import com.khozin.pembelajarankaidah.database.AppDatabase;
 import com.khozin.pembelajarankaidah.utils.SessionManager;
 import com.khozin.pembelajarankaidah.data.remote.ApiService;
@@ -417,14 +418,15 @@ public class KaidahListFragment extends Fragment {
                         // Save fetched data to Room database on background thread
                         Executors.newSingleThreadExecutor().execute(() -> {
                             saveKaidahGroupsToDatabase(kaidahGroupList);
-                            updateProgressFromLocalDatabase();
+                            // Update progress from API instead of local database
+                            updateProgressFromAPI(groupedResponse.getData().getSummary());
 
                             // Update UI on main thread after progress is updated
                             if (isAdded() && getActivity() != null) {
                                 getActivity().runOnUiThread(() -> {
                                     updateDisplayedData();
                                     hideLoading();
-                                    Log.d("KAIDAH_DEBUG", "Grouped UI updated successfully with local progress");
+                                    Log.d("KAIDAH_DEBUG", "Grouped UI updated successfully with API progress");
                                 });
                             }
                         });
@@ -567,6 +569,18 @@ public class KaidahListFragment extends Fragment {
     }
 
     /**
+     * Public method to refresh kaidah data
+     * This can be called from other fragments when data changes
+     */
+    public void refreshKaidahData() {
+        android.util.Log.d("KaidahListFragment", "Refreshing kaidah data from API...");
+        if (sessionManager.isLoggedIn()) {
+            // Always refresh from API to get latest progress data
+            loadKaidahData();
+        }
+    }
+
+    /**
      * Update progress information from local database
      * This merges API data with local progress data synchronously
      */
@@ -616,6 +630,187 @@ public class KaidahListFragment extends Fragment {
     }
 
     /**
+     * Update progress from API progress endpoint
+     * Instead of using local database, fetch progress from API
+     */
+    private void updateProgressFromAPI(KaidahGroupedResponse.Summary summary) {
+        if (kaidahGroupList == null || kaidahGroupList.isEmpty()) {
+            return;
+        }
+
+        Log.d("KAIDAH_DEBUG", "Updating progress from API...");
+
+        try {
+            // Get progress data from API progress endpoint
+            String sessionToken = sessionManager.getAuthToken();
+            if (sessionToken == null || sessionToken.isEmpty()) {
+                Log.e("KAIDAH_DEBUG", "No session token found for progress update");
+                return;
+            }
+
+            Log.d("KAIDAH_DEBUG", "Fetching progress from API...");
+            apiService.getProgress("Bearer " + sessionToken).enqueue(new Callback<ApiResponse<java.util.Map<String, Object>>>() {
+                @Override
+                public void onResponse(Call<ApiResponse<java.util.Map<String, Object>>> call, Response<ApiResponse<java.util.Map<String, Object>>> response) {
+                    if (response.isSuccessful() && response.body() != null) {
+                        ApiResponse<java.util.Map<String, Object>> apiResponse = response.body();
+                        if (apiResponse.getData() != null) {
+                            java.util.Map<String, Object> data = apiResponse.getData();
+
+                            // Extract overview data from progress API
+                            if (data.containsKey("overview")) {
+                                java.util.Map<String, Object> overview = (java.util.Map<String, Object>) data.get("overview");
+
+                                // Parse progress data
+                                int totalKaidah = safeParseInt(overview.get("total_kaidah"));
+                                int kaidahSelesai = safeParseInt(overview.get("kaidah_selesai"));
+
+                                Log.d("KAIDAH_DEBUG", String.format("API Progress: %d/%d kaidah completed",
+                                    kaidahSelesai, totalKaidah));
+
+                                // Update kaidah status based on API progress data
+                                updateKaidahStatusFromAPI(overview);
+                            }
+                        }
+                    } else {
+                        Log.e("KAIDAH_DEBUG", "Failed to fetch progress: " + response.code());
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<ApiResponse<java.util.Map<String, Object>>> call, Throwable t) {
+                    Log.e("KAIDAH_DEBUG", "Error fetching progress from API", t);
+                }
+            });
+
+        } catch (Exception e) {
+            Log.e("KAIDAH_DEBUG", "Error updating progress from API", e);
+        }
+    }
+
+    /**
+     * Update kaidah status based on API progress data
+     */
+    private void updateKaidahStatusFromAPI(java.util.Map<String, Object> overview) {
+        android.util.Log.d("KAIDAH_DEBUG", "updateKaidahStatusFromAPI() called");
+
+        try {
+            // Extract kaidah progress data if available
+            if (overview.containsKey("kaidah_progress")) {
+                java.util.List<Object> kaidahProgress = (java.util.List<Object>) overview.get("kaidah_progress");
+                android.util.Log.d("KAIDAH_DEBUG", "Found " + kaidahProgress.size() + " kaidah progress items");
+
+                // Create a map for quick lookup
+                java.util.Map<Integer, java.util.Map<String, Object>> progressMap = new java.util.HashMap<>();
+                for (Object item : kaidahProgress) {
+                    if (item instanceof java.util.Map) {
+                        java.util.Map<String, Object> kaidahData = (java.util.Map<String, Object>) item;
+                        Integer idMateri = safeParseInt(kaidahData.get("id_materi"));
+                        if (idMateri != null) {
+                            progressMap.put(idMateri, kaidahData);
+                            android.util.Log.d("KAIDAH_DEBUG", "Progress for material " + idMateri + ": " +
+                                kaidahData.get("status") + " (" + kaidahData.get("completion_percentage") + "%)");
+                        }
+                    }
+                }
+
+                android.util.Log.d("KAIDAH_DEBUG", "Progress map created with " + progressMap.size() + " entries");
+
+                // Update each kaidah group with API progress data
+                int updatedCount = 0;
+                for (KaidahGroup group : kaidahGroupList) {
+                    android.util.Log.d("KAIDAH_DEBUG", "Processing group: " + group.getJudulBab() + " with " + group.getKaidahList().size() + " kaidah");
+                    if (group.getKaidahList() != null) {
+                        for (MateriKaidah apiMateri : group.getKaidahList()) {
+                            java.util.Map<String, Object> progressData = progressMap.get(apiMateri.getIdMateri());
+                            if (progressData != null) {
+                                // Update progress percentage
+                                Integer progressPercentage = safeParseInt(progressData.get("completion_percentage"));
+                                String status = safeParseString(progressData.get("status"));
+
+                                android.util.Log.d("KAIDAH_DEBUG", "Updating kaidah " + apiMateri.getIdMateri() +
+                                    ": " + apiMateri.getJudulKaidah() + " - status: " + status +
+                                    ", progress: " + progressPercentage + "%");
+
+                                if (progressPercentage != null) {
+                                    apiMateri.setProgressPercentage(progressPercentage);
+
+                                    // Update completion status based on percentage
+                                    apiMateri.setCompleted(progressPercentage >= 100);
+
+                                    // Update status
+                                    if (progressPercentage >= 100) {
+                                        apiMateri.setStatus("selesai");
+                                    } else if (progressPercentage > 0) {
+                                        apiMateri.setStatus("sedang_belajar");
+                                    } else {
+                                        apiMateri.setStatus("belum_dimulai");
+                                    }
+
+                                    android.util.Log.d("KAIDAH_DEBUG", "Updated progress for materi " + apiMateri.getJudulKaidah() +
+                                              ": " + progressPercentage + "% - " + apiMateri.getStatus());
+                                    updatedCount++;
+                                }
+                            } else {
+                                android.util.Log.d("KAIDAH_DEBUG", "No progress data found for kaidah " + apiMateri.getIdMateri() +
+                                    ": " + apiMateri.getJudulKaidah() + ", keeping status: " + apiMateri.getStatus());
+                            }
+                        }
+                    }
+                }
+
+                android.util.Log.d("KAIDAH_DEBUG", "Total kaidah updated: " + updatedCount);
+
+                // Notify adapter of data changes
+                if (kaidahGroupAdapter != null) {
+                    android.util.Log.d("KAIDAH_DEBUG", "Notifying adapter of data changes");
+                    kaidahGroupAdapter.notifyDataSetChanged();
+                } else {
+                    android.util.Log.e("KAIDAH_DEBUG", "Adapter is null, cannot notify of changes");
+                }
+
+                Log.d("KAIDAH_DEBUG", "Updated progress for " + updatedCount + " materi items from API");
+            } else {
+                android.util.Log.e("KAIDAH_DEBUG", "Overview does not contain 'kaidah_progress' key. Available keys: " +
+                    java.util.Arrays.toString(overview.keySet().toArray(new String[0])));
+            }
+
+        } catch (Exception e) {
+            Log.e("KAIDAH_DEBUG", "Error updating kaidah status from API", e);
+        }
+    }
+
+    /**
+     * Safely parse int from various types (String, Number, etc.)
+     */
+    private int safeParseInt(Object value) {
+        if (value == null) return 0;
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+        if (value instanceof String) {
+            try {
+                return Integer.parseInt((String) value);
+            } catch (NumberFormatException e) {
+                Log.w("KAIDAH_DEBUG", "Cannot parse int from string: " + value);
+                return 0;
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Safely parse string from various types
+     */
+    private String safeParseString(Object value) {
+        if (value == null) return null;
+        if (value instanceof String) {
+            return (String) value;
+        }
+        return value.toString();
+    }
+
+    /**
      * Save kaidah groups from API to Room database
      * This ensures data is available offline and reduces API calls
      */
@@ -625,75 +820,10 @@ public class KaidahListFragment extends Fragment {
             return;
         }
 
-        Log.d("KAIDAH_DEBUG", "Saving " + groups.size() + " kaidah groups to database...");
+        Log.d("KAIDAH_DEBUG", "Skipping database save, using API data directly");
 
-        try {
-            int totalKaidahSaved = 0;
-            int totalGroupsSaved = 0;
-
-            for (KaidahGroup group : groups) {
-                // Save Bab information if it exists
-                if (group.getBab() != null) {
-                    try {
-                        // Check if bab already exists to avoid duplicates
-                        String nomorBab = group.getBab().getNomorBab();
-                        Bab existingBab = database.babDao().getBabByNomor(nomorBab);
-                        if (existingBab == null) {
-                            // Insert new bab
-                            database.babDao().insert(group.getBab());
-                            Log.d("KAIDAH_DEBUG", "Saved new Bab: " + nomorBab);
-                        } else {
-                            Log.d("KAIDAH_DEBUG", "Bab already exists: " + nomorBab);
-                        }
-                    } catch (Exception e) {
-                        Log.e("KAIDAH_DEBUG", "Error saving bab " + group.getBab().getNomorBab(), e);
-                    }
-                }
-
-                // Save individual kaidah items
-                if (group.getKaidahList() != null) {
-                    for (MateriKaidah kaidah : group.getKaidahList()) {
-                        try {
-                            // Check if kaidah already exists
-                            MateriKaidah existingKaidah = database.materiKaidahDao().getById(kaidah.getIdMateri());
-                            if (existingKaidah == null) {
-                                // Set default values for new kaidah
-                                kaidah.setProgressPercentage(0);
-                                kaidah.setCompleted(false);
-                                kaidah.setTotalSoal(0); // Will be updated when soal are loaded
-
-                                // Insert new kaidah
-                                database.materiKaidahDao().insert(kaidah);
-                                totalKaidahSaved++;
-                                Log.d("KAIDAH_DEBUG", "Saved new Kaidah: " + kaidah.getIdMateri() + " - " + kaidah.getJudulKaidah());
-                            } else {
-                                // Update existing kaidah with latest data from API (preserve progress)
-                                existingKaidah.setJudulKaidah(kaidah.getJudulKaidah());
-                                existingKaidah.setDeskripsi(kaidah.getDeskripsi());
-                                existingKaidah.setPenjelasan(kaidah.getPenjelasan());
-                                existingKaidah.setContoh(kaidah.getContoh());
-                                // tingkatKesulitan field doesn't exist in MateriKaidah model
-                                existingKaidah.setUrutan(kaidah.getUrutan());
-                                existingKaidah.setDibuatOleh(kaidah.getDibuatOleh());
-                                existingKaidah.setWaktuDibuat(kaidah.getWaktuDibuat());
-                                existingKaidah.setWaktuDiubah(kaidah.getWaktuDiubah());
-
-                                database.materiKaidahDao().update(existingKaidah);
-                                Log.d("KAIDAH_DEBUG", "Updated existing Kaidah: " + kaidah.getIdMateri());
-                            }
-                        } catch (Exception e) {
-                            Log.e("KAIDAH_DEBUG", "Error saving kaidah " + kaidah.getIdMateri(), e);
-                        }
-                    }
-                }
-                totalGroupsSaved++;
-            }
-
-            Log.d("KAIDAH_DEBUG", "Successfully saved " + totalGroupsSaved + " groups and " + totalKaidahSaved + " kaidah to database");
-
-        } catch (Exception e) {
-            Log.e("KAIDAH_DEBUG", "Error saving kaidah groups to database", e);
-        }
+        // Skip all database operations
+        Log.d("KAIDAH_DEBUG", "API data loaded successfully, no database operations performed");
     }
 
     @Override

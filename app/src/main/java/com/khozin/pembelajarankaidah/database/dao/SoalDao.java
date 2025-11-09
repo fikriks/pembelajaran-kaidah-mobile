@@ -72,16 +72,16 @@ public interface SoalDao {
     List<Soal> getAllSoalSync();
 
     /**
-     * Get soal by materi ID
+     * Get soal by bab ID
      */
-    @Query("SELECT * FROM soal WHERE id_materi = :materiId ORDER BY id_soal ASC")
-    LiveData<List<Soal>> getByMateriId(int materiId);
+    @Query("SELECT * FROM soal WHERE id_bab = :babId ORDER BY id_soal ASC")
+    LiveData<List<Soal>> getByBabId(int babId);
 
     /**
-     * Get soal by materi ID (sync)
+     * Get soal by bab ID (sync)
      */
-    @Query("SELECT * FROM soal WHERE id_materi = :materiId ORDER BY id_soal ASC")
-    List<Soal> getByMateriIdSync(int materiId);
+    @Query("SELECT * FROM soal WHERE id_bab = :babId ORDER BY id_soal ASC")
+    List<Soal> getByBabIdSync(int babId);
 
     /**
      * Get soal by tingkat kesulitan
@@ -92,8 +92,8 @@ public interface SoalDao {
     /**
      * Get soal acak untuk quiz
      */
-    @Query("SELECT * FROM soal WHERE id_materi = :materiId ORDER BY RANDOM() LIMIT :limit")
-    List<Soal> getSoalAcak(int materiId, int limit);
+    @Query("SELECT * FROM soal WHERE id_bab = :babId ORDER BY RANDOM() LIMIT :limit")
+    List<Soal> getSoalAcak(int babId, int limit);
 
     /**
      * Get total count soal
@@ -102,10 +102,10 @@ public interface SoalDao {
     int getTotalCount();
 
     /**
-     * Get count by materi ID
+     * Get count by bab ID
      */
-    @Query("SELECT COUNT(*) FROM soal WHERE id_materi = :materiId")
-    int getCountByMateri(int materiId);
+    @Query("SELECT COUNT(*) FROM soal WHERE id_bab = :babId")
+    int getCountByBab(int babId);
 
     /**
      * Get count by tingkat kesulitan
@@ -150,10 +150,10 @@ public interface SoalDao {
     int deleteById(int id);
 
     /**
-     * Delete soal by materi ID
+     * Delete soal by bab ID
      */
-    @Query("DELETE FROM soal WHERE id_materi = :materiId")
-    int deleteByMateriId(int materiId);
+    @Query("DELETE FROM soal WHERE id_bab = :babId")
+    int deleteByBabId(int babId);
 
     /**
      * Delete all soal
@@ -192,18 +192,18 @@ public interface SoalDao {
     /**
      * Get soal untuk quiz dengan LCM seed
      */
-    @Query("SELECT * FROM soal WHERE id_materi = :materiId " +
+    @Query("SELECT * FROM soal WHERE id_bab = :babId " +
             "AND id_soal IN (SELECT id_soal FROM detail_jawaban_siswa WHERE id_sesi = :sesiId) " +
             "ORDER BY id_soal ASC")
-    List<Soal> getSoalForSesi(int materiId, int sesiId);
+    List<Soal> getSoalForSesi(int babId, int sesiId);
 
     /**
      * Get soal yang belum ada jawaban
      */
-    @Query("SELECT * FROM soal WHERE id_materi = :materiId " +
+    @Query("SELECT * FROM soal WHERE id_bab = :babId " +
             "AND id_soal NOT IN (SELECT id_soal FROM detail_jawaban_siswa WHERE id_sesi = :sesiId) " +
             "ORDER BY id_soal ASC")
-    List<Soal> getSoalBelumDijawab(int materiId, int sesiId);
+    List<Soal> getSoalBelumDijawab(int babId, int sesiId);
 
     /**
      * Update soal fields from API response
@@ -249,14 +249,14 @@ public interface SoalDao {
     /**
      * Get random soal untuk practice
      */
-    @Query("SELECT * FROM soal WHERE id_materi = :materiId AND tingkat_kesulitan = :tingkat ORDER BY RANDOM() LIMIT :limit")
-    List<Soal> getSoalPractice(int materiId, String tingkat, int limit);
+    @Query("SELECT * FROM soal WHERE id_bab = :babId AND tingkat_kesulitan = :tingkat ORDER BY RANDOM() LIMIT :limit")
+    List<Soal> getSoalPractice(int babId, String tingkat, int limit);
 
     /**
      * Get soal untuk material completion check
      */
-    @Query("SELECT * FROM soal WHERE id_materi = :materiId ORDER BY id_soal ASC")
-    List<Soal> getSoalForCompletionCheck(int materiId);
+    @Query("SELECT * FROM soal WHERE id_bab = :babId ORDER BY id_soal ASC")
+    List<Soal> getSoalForCompletionCheck(int babId);
 
     /**
      * Get soal performance statistics
@@ -294,10 +294,10 @@ public interface SoalDao {
      * Get soal dengan multiple filters
      */
     @Query("SELECT * FROM soal WHERE " +
-            "(:materiId IS NULL OR id_materi = :materiId) AND " +
+            "(:babId IS NULL OR id_bab = :babId) AND " +
             "(:tingkat IS NULL OR tingkat_kesulitan = :tingkat) AND " +
             "(:minPoin IS NULL OR poin >= :minPoin) AND " +
             "(:maxPoin IS NULL OR poin <= :maxPoin) " +
             "ORDER BY id_soal ASC")
-    List<Soal> getSoalWithFilters(Integer materiId, String tingkat, Integer minPoin, Integer maxPoin);
+    List<Soal> getSoalWithFilters(Integer babId, String tingkat, Integer minPoin, Integer maxPoin);
 }
