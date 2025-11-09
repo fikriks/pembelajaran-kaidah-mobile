@@ -131,6 +131,11 @@ public interface ApiService {
     // PROGRESS & STATISTIK
     // ===================
 
+    @GET("progress")
+    Call<ApiResponse<Map<String, Object>>> getProgress(
+            @Header("Authorization") String sessionToken
+    );
+
     @GET(ApiConstants.PROGRESS_LIST)
     Call<ApiResponse<List<RiwayatBelajar>>> getProgressList();
 
@@ -142,6 +147,33 @@ public interface ApiService {
 
     @GET(ApiConstants.STATISTIK)
     Call<ApiResponse<Map<String, Object>>> getStatistik();
+
+    // ===================
+    // SOAL/QUESTION ENDPOINTS
+    // ===================
+
+    /**
+     * Get random soal untuk bab tertentu
+     * Menggunakan LCM algorithm untuk pengacakan
+     */
+    @POST("api/soal/random")
+    Call<ApiResponse<Map<String, Object>>> getRandomSoal(
+            @Body Map<String, Object> soalRequest
+    );
+
+    // ===================
+    // PROGRESS METHODS
+    // ===================
+
+    /**
+     * Mark materi as completed
+     * Sync progress dengan server
+     */
+    @POST(ApiConstants.MATERI_COMPLETE)
+    Call<ApiResponse<Map<String, Object>>> completeMateri(
+            @Header("Authorization") String authToken,
+            @Path("id") int materiId
+    );
 
     // ===================
     // UTILITY METHODS

@@ -8,6 +8,7 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.util.Log;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -23,6 +24,7 @@ import com.khozin.pembelajarankaidah.data.model.Bab;
 import com.khozin.pembelajarankaidah.data.model.RiwayatBelajar;
 import com.khozin.pembelajarankaidah.data.model.KaidahListResponse;
 import com.khozin.pembelajarankaidah.database.AppDatabase;
+import com.khozin.pembelajarankaidah.database.dao.MateriKaidahDao;
 import com.khozin.pembelajarankaidah.utils.SessionManager;
 import com.khozin.pembelajarankaidah.data.remote.ApiService;
 import com.khozin.pembelajarankaidah.network.RetrofitClient;
@@ -397,29 +399,129 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
 
         if (nextKaidah != null) {
             // Mark current materi as completed before moving to next
-            android.util.Log.d("KaidahDetail", "Calling markCurrentMateriAsCompleted() for materi: " + currentKaidah.getJudulKaidah());
-            markCurrentMateriAsCompleted();
+            android.util.Log.d("KaidahDetail", "=== NAVIGATION DEBUG: About to call markCurrentMateriAsCompleted() ===");
+            android.util.Log.d("KaidahDetail", "=== NAVIGATION DEBUG: Calling markCurrentMateriAsCompleted() for materi: " + currentKaidah.getJudulKaidah());
 
-            // Update current index and kaidah
-            for (int i = 0; i < allKaidahList.size(); i++) {
-                if (allKaidahList.get(i).getIdMateri() == nextKaidah.getIdMateri()) {
-                    currentKaidahIndex = i;
-                    currentKaidah = nextKaidah;
-                    break;
+            // Create a semaphore to wait for completion to finish
+            java.util.concurrent.Semaphore completionSemaphore = new java.util.concurrent.Semaphore(0);
+            final boolean[] completionSuccess = {false};
+
+            // Run completion marking in background but wait for it to complete
+            Executors.newSingleThreadExecutor().execute(() -> {
+                try {
+                    android.util.Log.d("KaidahDetail", "=== NAVIGATION DEBUG: Starting markCurrentMateriAsCompleted() execution ===");
+                    markCurrentMateriAsCompleted();
+                    completionSuccess[0] = true;
+                    android.util.Log.d("KaidahDetail", "=== NAVIGATION DEBUG: markCurrentMateriAsCompleted() completed successfully ===");
+                } catch (Exception e) {
+                    android.util.Log.e("KaidahDetail", "=== NAVIGATION ERROR: Error in markCurrentMateriAsCompleted(): " + e.getMessage(), e);
+                    android.util.Log.e("KaidahDetail", "=== NAVIGATION ERROR: Exception details: " + e.getClass().getSimpleName());
+                    completionSuccess[0] = false;
+                } finally {
+                    completionSemaphore.release();
                 }
+            });
+
+            // Wait for completion to finish (max 5 seconds)
+            try {
+                completionSemaphore.tryAcquire(5, java.util.concurrent.TimeUnit.SECONDS);
+                if (completionSuccess[0]) {
+                    android.util.Log.d("KaidahDetail", "Materi completion successful, proceeding to next materi");
+                } else {
+                    android.util.Log.w("KaidahDetail", "Materi completion may have failed, but proceeding anyway");
+                }
+            } catch (InterruptedException e) {
+                android.util.Log.e("KaidahDetail", "Interrupted while waiting for materi completion", e);
+                Thread.currentThread().interrupt();
             }
 
-            // Load next kaidah data
-            bindData(nextKaidah);
+            // Create final copies for lambda access
+            final int nextMateriId = nextKaidah.getIdMateri();
+            final MateriKaidah[] updatedNextKaidah = {nextKaidah};
 
+            // Check if next materi exists in database, if not fetch from API
+            Executors.newSingleThreadExecutor().execute(() -> {
+                try {
+                    MateriKaidah nextKaidahFromDb = database.materiKaidahDao().getById(nextMateriId);
 
-            // Scroll to top
-            if (getView() != null) {
-                getView().post(() -> {
-                    ((androidx.core.widget.NestedScrollView) getView().findViewById(R.id.scrollView))
-                            .smoothScrollTo(0, 0);
-                });
-            }
+                    if (nextKaidahFromDb == null) {
+                        android.util.Log.w("KaidahDetail", "Next materi not found in database, fetching from API...");
+
+                        // Fetch from API and save
+                        if (fetchMateriFromApiAndSave(nextMateriId)) {
+                            android.util.Log.d("KaidahDetail", "Successfully fetched next materi from API");
+                            // Get the updated materi from database
+                            nextKaidahFromDb = database.materiKaidahDao().getById(nextMateriId);
+                            if (nextKaidahFromDb != null) {
+                                updatedNextKaidah[0] = nextKaidahFromDb;
+                            }
+                        } else {
+                            android.util.Log.e("KaidahDetail", "Failed to fetch next materi from API");
+
+                            // Show error on main thread
+                            if (isAdded() && getActivity() != null) {
+                                getActivity().runOnUiThread(() -> {
+                                    Toast.makeText(getContext(), "Gagal memuat materi selanjutnya", Toast.LENGTH_SHORT).show();
+                                });
+                            }
+                            return;
+                        }
+                    } else {
+                        updatedNextKaidah[0] = nextKaidahFromDb;
+                    }
+
+                    // Update current index and kaidah on main thread
+                    final MateriKaidah finalNextKaidah = updatedNextKaidah[0];
+                    if (isAdded() && getActivity() != null) {
+                        getActivity().runOnUiThread(() -> {
+                            for (int i = 0; i < allKaidahList.size(); i++) {
+                                if (allKaidahList.get(i).getIdMateri() == finalNextKaidah.getIdMateri()) {
+                                    currentKaidahIndex = i;
+                                    currentKaidah = finalNextKaidah;
+                                    break;
+                                }
+                            }
+
+                            // Load next kaidah data
+                            bindData(finalNextKaidah);
+
+                            // Scroll to top
+                            if (getView() != null) {
+                                getView().post(() -> {
+                                    ((androidx.core.widget.NestedScrollView) getView().findViewById(R.id.scrollView))
+                                            .smoothScrollTo(0, 0);
+                                });
+                            }
+                        });
+                    }
+                } catch (Exception e) {
+                    android.util.Log.e("KaidahDetail", "Error checking next materi in database", e);
+
+                    // Continue with navigation even if there's an error
+                    if (isAdded() && getActivity() != null) {
+                        getActivity().runOnUiThread(() -> {
+                            for (int i = 0; i < allKaidahList.size(); i++) {
+                                if (allKaidahList.get(i).getIdMateri() == nextMateriId) {
+                                    currentKaidahIndex = i;
+                                    currentKaidah = nextKaidah;
+                                    break;
+                                }
+                            }
+
+                            // Load next kaidah data
+                            bindData(nextKaidah);
+
+                            // Scroll to top
+                            if (getView() != null) {
+                                getView().post(() -> {
+                                    ((androidx.core.widget.NestedScrollView) getView().findViewById(R.id.scrollView))
+                                            .smoothScrollTo(0, 0);
+                                });
+                            }
+                        });
+                    }
+                }
+            });
         } else {
             // Last materi - mark as completed and check if bab is completed
             android.util.Log.d("KaidahDetail", "Last materi reached. Calling markCurrentMateriAsCompleted()");
@@ -671,6 +773,118 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
     }
 
     /**
+     * Fetch specific materi from API and save to database
+     * @param materiId The ID of materi to fetch
+     * @return true if successful, false otherwise
+     */
+    private boolean fetchMateriFromApiAndSave(int materiId) {
+        android.util.Log.d("KaidahDetail", "=== FETCH MATERI FROM API AND SAVE START ===");
+        android.util.Log.d("KaidahDetail", "Fetching materi ID: " + materiId);
+
+        String sessionToken = sessionManager.getAuthToken();
+        if (sessionToken == null || sessionToken.isEmpty()) {
+            android.util.Log.e("KaidahDetail", "No session token for API fetch");
+            return false;
+        }
+
+        try {
+            // Create a semaphore to wait for async call
+            java.util.concurrent.Semaphore semaphore = new java.util.concurrent.Semaphore(0);
+            final boolean[] success = {false};
+            final AppDatabase finalDatabase = database; // Create final copy for lambda
+            final MateriKaidahDao finalMateriKaidahDao = finalDatabase.materiKaidahDao(); // Create final DAO for lambda
+
+            // Load all kaidah from API and find the specific one
+            apiService.getKaidahListWithWrapper().enqueue(new Callback<KaidahListResponse>() {
+                @Override
+                public void onResponse(Call<KaidahListResponse> call, Response<KaidahListResponse> response) {
+                    try {
+                        if (response.isSuccessful() && response.body() != null) {
+                            KaidahListResponse kaidahResponse = response.body();
+                            if (kaidahResponse.isSuccess() && kaidahResponse.getKaidahList() != null) {
+                                List<MateriKaidah> kaidahList = kaidahResponse.getKaidahList();
+
+                                // Find the specific kaidah by ID
+                                MateriKaidah foundKaidah = null;
+                                for (MateriKaidah kaidah : kaidahList) {
+                                    if (kaidah.getIdMateri() == materiId) {
+                                        foundKaidah = kaidah;
+                                        break;
+                                    }
+                                }
+
+                                if (foundKaidah != null) {
+                                    android.util.Log.d("KaidahDetail", "Found materi in API: " + foundKaidah.getJudulKaidah());
+
+                                    // Create final copy for lambda
+                                    final MateriKaidah finalFoundKaidah = foundKaidah;
+
+                                    // Save to database on background thread
+                                    Executors.newSingleThreadExecutor().execute(() -> {
+                                        try {
+                                            // Set default values for new materi
+                                            finalFoundKaidah.setProgressPercentage(0);
+                                            finalFoundKaidah.setCompleted(false);
+                                            finalFoundKaidah.setTotalSoal(0);
+
+                                            // Save only the specific materi
+                                            finalMateriKaidahDao.insert(finalFoundKaidah);
+                                            android.util.Log.d("KaidahDetail", "Successfully saved materi to database");
+                                            success[0] = true;
+                                        } catch (Exception e) {
+                                            android.util.Log.e("KaidahDetail", "Failed to save materi to database", e);
+                                            success[0] = false;
+                                        } finally {
+                                            semaphore.release();
+                                        }
+                                    });
+                                } else {
+                                    android.util.Log.e("KaidahDetail", "Materi ID " + materiId + " not found in API response");
+                                    success[0] = false;
+                                    semaphore.release();
+                                }
+                            } else {
+                                android.util.Log.e("KaidahDetail", "API response not successful: " + kaidahResponse.getMessage());
+                                success[0] = false;
+                                semaphore.release();
+                            }
+                        } else {
+                            android.util.Log.e("KaidahDetail", "API call failed: " + response.code());
+                            success[0] = false;
+                            semaphore.release();
+                        }
+                    } catch (Exception e) {
+                        android.util.Log.e("KaidahDetail", "Exception in API response handling", e);
+                        success[0] = false;
+                        semaphore.release();
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<KaidahListResponse> call, Throwable t) {
+                    android.util.Log.e("KaidahDetail", "API call failed", t);
+                    success[0] = false;
+                    semaphore.release();
+                }
+            });
+
+            // Wait for the API call to complete (max 10 seconds)
+            boolean completed = semaphore.tryAcquire(10, java.util.concurrent.TimeUnit.SECONDS);
+            if (!completed) {
+                android.util.Log.e("KaidahDetail", "API call timed out");
+                return false;
+            }
+
+            android.util.Log.d("KaidahDetail", "=== FETCH MATERI FROM API AND SAVE END ===");
+            return success[0];
+
+        } catch (Exception e) {
+            android.util.Log.e("KaidahDetail", "Exception in fetchMateriFromApiAndSave", e);
+            return false;
+        }
+    }
+
+    /**
      * Load kaidah from API as fallback
      */
     private void loadKaidahFromAPI(int kaidahId) {
@@ -789,14 +1003,19 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
         android.util.Log.d("KaidahDetail", "=== MARK MATERI COMPLETED DEBUG START ===");
 
         if (currentKaidah == null) {
-            android.util.Log.e("KaidahDetail", "currentKaidah is null, cannot mark as completed");
+            android.util.Log.e("KaidahDetail", "ERROR: currentKaidah is null, cannot mark as completed");
             return;
         }
 
         if (!sessionManager.isLoggedIn()) {
-            android.util.Log.e("KaidahDetail", "User is not logged in, cannot mark as completed");
+            android.util.Log.e("KaidahDetail", "ERROR: User is not logged in, cannot mark as completed");
             return;
         }
+
+        android.util.Log.d("KaidahDetail", "SUCCESS: All checks passed - proceeding to mark materi as completed");
+        android.util.Log.d("KaidahDetail", "Materi to complete: " + currentKaidah.getJudulKaidah() + " (ID: " + currentKaidah.getIdMateri() + ")");
+        android.util.Log.d("KaidahDetail", "Current progress before marking: " + currentKaidah.getProgressPercentage() + "%");
+        android.util.Log.d("KaidahDetail", "Current completed status: " + currentKaidah.isCompleted());
 
         android.util.Log.d("KaidahDetail", "Marking materi as completed: " + currentKaidah.getJudulKaidah());
         android.util.Log.d("KaidahDetail", "Materi ID: " + currentKaidah.getIdMateri());
@@ -827,10 +1046,10 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
             try {
                 // Get current student ID
                 int siswaId = sessionManager.getUserId();
-                android.util.Log.d("KaidahDetail", "Student ID: " + siswaId);
+                android.util.Log.d("KaidahDetail", "DATABASE DEBUG: Student ID: " + siswaId);
 
                 if (siswaId == -1) {
-                    android.util.Log.e("KaidahDetail", "Invalid student ID: " + siswaId + ". Cannot save riwayat belajar.");
+                    android.util.Log.e("KaidahDetail", "DATABASE ERROR: Invalid student ID: " + siswaId + ". Cannot save riwayat belajar.");
                     return;
                 }
 
@@ -859,46 +1078,85 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
 
                 android.util.Log.d("KaidahDetail", "Siswa found: " + siswa.getNamaLengkap() + " (ID: " + siswaId + ")");
 
-                // 1. Update materi progress
+                // 1. FIRST: Ensure materi exists in database before updating it
+                android.util.Log.d("KaidahDetail", "DATABASE DEBUG: Step 1 - Checking if materi ID " + currentMateriId + " exists in database");
+                MateriKaidah materiInDatabase = database.materiKaidahDao().getById(currentMateriId);
+
+                if (materiInDatabase == null) {
+                    android.util.Log.e("KaidahDetail", "DATABASE WARNING: Materi ID " + currentMateriId + " does not exist in database!");
+                    android.util.Log.e("KaidahDetail", "DATABASE WARNING: Fetching from API and saving to database BEFORE updating progress...");
+
+                    // Try to fetch materi from API and save to database
+                    if (fetchMateriFromApiAndSave(currentMateriId)) {
+                        android.util.Log.d("KaidahDetail", "DATABASE SUCCESS: Successfully fetched and saved materi from API");
+                        // Retry getting materi from database
+                        materiInDatabase = database.materiKaidahDao().getById(currentMateriId);
+                        if (materiInDatabase == null) {
+                            android.util.Log.e("KaidahDetail", "DATABASE ERROR: Still could not find materi after API fetch!");
+                            return;
+                        }
+                    } else {
+                        android.util.Log.e("KaidahDetail", "DATABASE ERROR: Failed to fetch materi from API");
+
+                        // Show error toast on main thread
+                        if (isAdded() && getActivity() != null) {
+                            getActivity().runOnUiThread(() -> {
+                                Toast.makeText(getContext(), "Error: Materi tidak ditemukan. Gagal mengunduh dari server.", Toast.LENGTH_LONG).show();
+                            });
+                        }
+                        return;
+                    }
+                }
+
+                android.util.Log.d("KaidahDetail", "DATABASE SUCCESS: Materi exists in database: " + materiInDatabase.getJudulKaidah());
+
+                // 2. NOW: Update materi progress
+                android.util.Log.d("KaidahDetail", "DATABASE DEBUG: Step 2 - About to update materi progress in materi_kaidah table");
+                android.util.Log.d("KaidahDetail", "DATABASE DEBUG: Calling updateProgress with materiId=" + currentMateriId + ", totalSoal=0, progress=100, isCompleted=true");
+
                 int result = database.materiKaidahDao().updateProgress(currentMateriId, 0, 100, true);
-                android.util.Log.d("KaidahDetail", "Materi progress updated to database, result: " + result);
+                android.util.Log.d("KaidahDetail", "DATABASE DEBUG: Materi progress update result: " + result + " rows affected");
+
+                // Verify the update actually worked
+                MateriKaidah updatedMateri = database.materiKaidahDao().getById(currentMateriId);
+                if (updatedMateri != null) {
+                    android.util.Log.d("KaidahDetail", "DATABASE SUCCESS: Verification - materi progress after update: " + updatedMateri.getProgressPercentage() + "%");
+                    android.util.Log.d("KaidahDetail", "DATABASE SUCCESS: Verification - materi completed status after update: " + updatedMateri.isCompleted());
+                } else {
+                    android.util.Log.e("KaidahDetail", "DATABASE ERROR: Could not verify materi update - materi not found in database after update!");
+                }
                 android.util.Log.d("KaidahDetail", "DEBUG: currentKaidahIndex = " + currentKaidahIndex);
                 android.util.Log.d("KaidahDetail", "DEBUG: Using copied materiId = " + currentMateriId);
                 android.util.Log.d("KaidahDetail", "DEBUG: Using copied judul = " + currentMateriJudul);
 
-                // 2. Verify materi exists in database before creating riwayat
-                android.util.Log.d("KaidahDetail", "Checking if materi ID " + currentMateriId + " exists in database");
-                MateriKaidah materiInDatabase = database.materiKaidahDao().getById(currentMateriId);
-
-                if (materiInDatabase == null) {
-                    android.util.Log.e("KaidahDetail", "ERROR: Materi ID " + currentMateriId + " does not exist in database!");
-                    android.util.Log.e("KaidahDetail", "Cannot create riwayat belajar for non-existent materi");
-
-                    // Show error toast on main thread
-                    if (isAdded() && getActivity() != null) {
-                        getActivity().runOnUiThread(() -> {
-                            Toast.makeText(getContext(), "Error: Materi tidak ditemukan di database", Toast.LENGTH_LONG).show();
-                        });
-                    }
-                    return;
-                }
-
                 android.util.Log.d("KaidahDetail", "Materi ID " + currentMateriId + " exists in database: " + materiInDatabase.getJudulKaidah());
 
                 // 3. Create or update riwayat belajar record
-                android.util.Log.d("KaidahDetail", "Checking existing riwayat for siswa " + siswaId + " and materi " + currentMateriId);
+                android.util.Log.d("KaidahDetail", "DATABASE DEBUG: Checking existing riwayat for siswa " + siswaId + " and materi " + currentMateriId);
                 RiwayatBelajar existingRiwayat = database.riwayatBelajarDao().getTerakhirBySiswaAndMateri(siswaId, currentMateriId);
 
                 if (existingRiwayat != null) {
-                    android.util.Log.d("KaidahDetail", "Found existing riwayat: " + existingRiwayat.getStatus());
+                    android.util.Log.d("KaidahDetail", "DATABASE DEBUG: Found existing riwayat - ID: " + existingRiwayat.getIdRiwayat() + ", Status: " + existingRiwayat.getStatus() + ", Progress: " + existingRiwayat.getPersentasePenguasaan() + "%");
+
                     // Update existing riwayat
+                    android.util.Log.d("KaidahDetail", "DATABASE DEBUG: Updating existing riwayat to completed");
                     existingRiwayat.setPersentasePenguasaan(100.0f);
                     existingRiwayat.setStatus("selesai");
                     existingRiwayat.setWaktuDiubah(java.text.DateFormat.getDateTimeInstance().format(new java.util.Date()));
+                    android.util.Log.d("KaidahDetail", "DATABASE DEBUG: About to call riwayatBelajarDao().update()");
+
                     int updateResult = database.riwayatBelajarDao().update(existingRiwayat);
-                    android.util.Log.d("KaidahDetail", "Existing riwayat updated to completed, result: " + updateResult);
+                    android.util.Log.d("KaidahDetail", "DATABASE DEBUG: Existing riwayat update result: " + updateResult + " rows affected");
+
+                    // Verify the riwayat update worked
+                    RiwayatBelajar verifyUpdated = database.riwayatBelajarDao().getTerakhirBySiswaAndMateri(siswaId, currentMateriId);
+                    if (verifyUpdated != null) {
+                        android.util.Log.d("KaidahDetail", "DATABASE DEBUG: Verification - riwayat after update: " + verifyUpdated.getStatus() + ", Progress: " + verifyUpdated.getPersentasePenguasaan() + "%");
+                    } else {
+                        android.util.Log.e("KaidahDetail", "DATABASE ERROR: Could not verify riwayat update - riwayat not found after update!");
+                    }
                 } else {
-                    android.util.Log.d("KaidahDetail", "No existing riwayat found, creating new one");
+                    android.util.Log.d("KaidahDetail", "DATABASE DEBUG: No existing riwayat found, creating new one");
                     // Create new riwayat with minimal required fields
                     RiwayatBelajar newRiwayat = new RiwayatBelajar();
                     newRiwayat.setIdSiswa(siswaId);
@@ -908,8 +1166,9 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
                     newRiwayat.setPersentasePenguasaan(100.0f);
                     newRiwayat.setWaktuDiubah(java.text.DateFormat.getDateTimeInstance().format(new java.util.Date()));
 
-                    android.util.Log.d("KaidahDetail", "DEBUG: About to insert riwayat with materi ID: " + currentMateriId);
-                    android.util.Log.d("KaidahDetail", "DEBUG: newRiwayat.toString() = " + newRiwayat.toString());
+                    android.util.Log.d("KaidahDetail", "DATABASE DEBUG: About to insert new riwayat with materi ID: " + currentMateriId);
+                    android.util.Log.d("KaidahDetail", "DATABASE DEBUG: newRiwayat.toString() = " + newRiwayat.toString());
+                    android.util.Log.d("KaidahDetail", "DATABASE DEBUG: New riwayat details - SiswaID: " + siswaId + ", MateriID: " + currentMateriId + ", Status: selesai, Progress: 100%");
 
                     // Verify materi exists before inserting riwayat
                     MateriKaidah materiForDebug = database.materiKaidahDao().getById(currentMateriId);
@@ -922,8 +1181,18 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
                     // Only proceed if both siswa and materi exist
                     if (materiForDebug != null && siswaForDebug != null) {
                         try {
+                            android.util.Log.d("KaidahDetail", "DATABASE DEBUG: About to call riwayatBelajarDao().insert()");
                             long insertResult = database.riwayatBelajarDao().insert(newRiwayat);
-                            android.util.Log.d("KaidahDetail", "New riwayat created as completed, ID: " + insertResult);
+                            android.util.Log.d("KaidahDetail", "DATABASE DEBUG: New riwayat insert result: " + insertResult + " (new record ID)");
+
+                            // Verify the insert worked
+                            RiwayatBelajar verifyInserted = database.riwayatBelajarDao().getTerakhirBySiswaAndMateri(siswaId, currentMateriId);
+                            if (verifyInserted != null) {
+                                android.util.Log.d("KaidahDetail", "DATABASE DEBUG: Verification - riwayat after insert: " + verifyInserted.getStatus() + ", Progress: " + verifyInserted.getPersentasePenguasaan() + "%");
+                                android.util.Log.d("KaidahDetail", "DATABASE DEBUG: Verification - riwayat ID: " + verifyInserted.getIdRiwayat());
+                            } else {
+                                android.util.Log.e("KaidahDetail", "DATABASE ERROR: Could not verify riwayat insert - riwayat not found after insert!");
+                            }
                         } catch (Exception e) {
                             android.util.Log.e("KaidahDetail", "Failed to insert riwayat: " + e.getMessage());
                             // Try update if insert fails (possible duplicate)
@@ -956,27 +1225,95 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
                 }
 
                 // 4. Verify the riwayat was saved correctly
+                android.util.Log.d("KaidahDetail", "DATABASE DEBUG: Final verification - checking saved riwayat");
                 RiwayatBelajar savedRiwayat = database.riwayatBelajarDao().getTerakhirBySiswaAndMateri(siswaId, currentMateriId);
                 if (savedRiwayat != null) {
-                    android.util.Log.d("KaidahDetail", "VERIFICATION: Saved riwayat status: " + savedRiwayat.getStatus());
-                    android.util.Log.d("KaidahDetail", "VERIFICATION: Saved riwayat persentase: " + savedRiwayat.getPersentasePenguasaan());
+                    android.util.Log.d("KaidahDetail", "DATABASE SUCCESS: Final verification - Saved riwayat status: " + savedRiwayat.getStatus());
+                    android.util.Log.d("KaidahDetail", "DATABASE SUCCESS: Final verification - Saved riwayat persentase: " + savedRiwayat.getPersentasePenguasaan() + "%");
+                    android.util.Log.d("KaidahDetail", "DATABASE SUCCESS: Final verification - Saved riwayat ID: " + savedRiwayat.getIdRiwayat());
                 } else {
-                    android.util.Log.e("KaidahDetail", "VERIFICATION: Failed to retrieve saved riwayat!");
+                    android.util.Log.e("KaidahDetail", "DATABASE ERROR: Final verification - Failed to retrieve saved riwayat!");
                 }
 
                 android.util.Log.d("KaidahDetail", "=== MARK MATERI COMPLETED DEBUG END ===");
+
+                // Sync with server API in background
+                android.util.Log.d("KaidahDetail", "SYNC: Starting server sync for materi completion");
+                syncMateriCompletionWithServer(currentMateriId);
 
                 // Show success toast and refresh UI on main thread
                 if (isAdded() && getActivity() != null) {
                     getActivity().runOnUiThread(() -> {
                         Toast.makeText(getContext(), "Materi \"" + currentMateriJudul + "\" telah selesai!", Toast.LENGTH_SHORT).show();
 
-                        // Refresh the current data to show updated status
-                        bindData(currentKaidah);
+                        // SIMPLE APPROACH: Force refresh data from database on background thread
+                        Executors.newSingleThreadExecutor().execute(() -> {
+                            try {
+                                // Get fresh data from database with progress
+                                List<MateriKaidah> freshDataList = database.materiKaidahDao().getMateriWithProgressSync(1); // Assuming siswa ID = 1 for simple approach
+                                MateriKaidah freshData = freshDataList.stream()
+                                        .filter(m -> m.getIdMateri() == currentMateriId)
+                                        .findFirst()
+                                        .orElse(null);
 
-                        // Also refresh the kaidah list if available
-                        if (allKaidahList != null && currentKaidahIndex < allKaidahList.size()) {
-                            allKaidahList.set(currentKaidahIndex, currentKaidah);
+                                if (freshData != null) {
+                                    // Update current kaidah with fresh data
+                                    currentKaidah.setProgressPercentage(freshData.getProgressPercentage());
+                                    currentKaidah.setStatus(freshData.getStatus());
+                                    currentKaidah.setCompleted(freshData.isCompleted());
+
+                                    Log.d("KaidahDetail", "SIMPLE FIX: Fresh data from DB - Status: " + freshData.getStatus() + ", Progress: " + freshData.getProgressPercentage() + "%");
+
+                                    // Refresh UI on main thread
+                                    if (isAdded() && getActivity() != null) {
+                                        getActivity().runOnUiThread(() -> {
+                                            // Refresh the current data to show updated status
+                                            bindData(currentKaidah);
+
+                                            // Also refresh the kaidah list if available
+                                            if (allKaidahList != null && currentKaidahIndex < allKaidahList.size()) {
+                                                allKaidahList.set(currentKaidahIndex, currentKaidah);
+                                            }
+                                        });
+                                    }
+                                }
+                            } catch (Exception dbException) {
+                                Log.e("KaidahDetail", "SIMPLE FIX: Error getting fresh data", dbException);
+                                // Still bind current data even if refresh fails
+                                if (isAdded() && getActivity() != null) {
+                                    getActivity().runOnUiThread(() -> bindData(currentKaidah));
+                                }
+                            }
+                        });
+                    });
+                }
+
+                // Refresh other fragments to show updated progress
+                android.util.Log.d("KaidahDetail", "REFRESH FIX: Refreshing other fragments after materi completion");
+                if (isAdded() && getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        // Try to find and refresh HomeFragment
+                        try {
+                            androidx.fragment.app.FragmentManager fragmentManager = getActivity().getSupportFragmentManager();
+                            androidx.fragment.app.Fragment homeFragment = fragmentManager.findFragmentByTag("home");
+                            if (homeFragment != null && homeFragment instanceof com.khozin.pembelajarankaidah.ui.home.HomeFragment) {
+                                android.util.Log.d("KaidahDetail", "REFRESH FIX: Found HomeFragment, calling refresh");
+                                ((com.khozin.pembelajarankaidah.ui.home.HomeFragment) homeFragment).refreshData();
+                            }
+                        } catch (Exception homeException) {
+                            android.util.Log.e("KaidahDetail", "REFRESH FIX: Error refreshing HomeFragment", homeException);
+                        }
+
+                        // Try to find and refresh KaidahListFragment
+                        try {
+                            androidx.fragment.app.FragmentManager fragmentManager = getActivity().getSupportFragmentManager();
+                            androidx.fragment.app.Fragment kaidahListFragment = fragmentManager.findFragmentByTag("kaidah");
+                            if (kaidahListFragment != null && kaidahListFragment instanceof com.khozin.pembelajarankaidah.ui.kaidah.KaidahListFragment) {
+                                android.util.Log.d("KaidahDetail", "REFRESH FIX: Found KaidahListFragment, calling refresh");
+                                ((com.khozin.pembelajarankaidah.ui.kaidah.KaidahListFragment) kaidahListFragment).refreshKaidahData();
+                            }
+                        } catch (Exception kaidahException) {
+                            android.util.Log.e("KaidahDetail", "REFRESH FIX: Error refreshing KaidahListFragment", kaidahException);
                         }
                     });
                 }
@@ -1010,6 +1347,87 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
                 }
             }
         });
+    }
+
+    /**
+     * Sync materi completion with server API
+     * Calls the new /api/progress/materi/{id}/complete endpoint
+     */
+    private void syncMateriCompletionWithServer(int materiId) {
+        android.util.Log.d("KaidahDetail", "=== SYNC MATERI COMPLETION WITH SERVER DEBUG START ===");
+        android.util.Log.d("KaidahDetail", "Syncing materi completion for ID: " + materiId);
+
+        if (!sessionManager.isLoggedIn()) {
+            android.util.Log.e("KaidahDetail", "Cannot sync - user not logged in");
+            return;
+        }
+
+        // Get API service
+        com.khozin.pembelajarankaidah.data.remote.ApiService apiService = com.khozin.pembelajarankaidah.network.RetrofitClient.getInstance().getApiService();
+
+        // Get auth token
+        String authToken = sessionManager.getAuthToken();
+        if (authToken == null || authToken.isEmpty()) {
+            android.util.Log.e("KaidahDetail", "Cannot sync - no auth token available");
+            return;
+        }
+
+        android.util.Log.d("KaidahDetail", "Making API call to complete materi: " + materiId);
+
+        // Make API call with Authorization header
+        retrofit2.Call<com.khozin.pembelajarankaidah.data.model.ApiResponse<java.util.Map<String, Object>>> call =
+            apiService.completeMateri("Bearer " + authToken, materiId);
+
+        call.enqueue(new retrofit2.Callback<com.khozin.pembelajarankaidah.data.model.ApiResponse<java.util.Map<String, Object>>>() {
+            @Override
+            public void onResponse(retrofit2.Call<com.khozin.pembelajarankaidah.data.model.ApiResponse<java.util.Map<String, Object>>> call,
+                                   retrofit2.Response<com.khozin.pembelajarankaidah.data.model.ApiResponse<java.util.Map<String, Object>>> response) {
+
+                android.util.Log.d("KaidahDetail", "API Response received - Code: " + response.code());
+
+                if (response.isSuccessful() && response.body() != null) {
+                    com.khozin.pembelajarankaidah.data.model.ApiResponse<java.util.Map<String, Object>> apiResponse = response.body();
+                    android.util.Log.d("KaidahDetail", "API Success: " + apiResponse.getMessage());
+
+                    if (apiResponse.getStatus() != null && apiResponse.getStatus().equals("success")) {
+                        android.util.Log.d("KaidahDetail", "Materi completion synced successfully with server");
+
+                        // Show success message on main thread
+                        if (isAdded() && getActivity() != null) {
+                            getActivity().runOnUiThread(() -> {
+                                Toast.makeText(getContext(), "Progress berhasil disinkron dengan server", Toast.LENGTH_SHORT).show();
+                            });
+                        }
+                    } else {
+                        android.util.Log.e("KaidahDetail", "API returned error status: " + apiResponse.getMessage());
+                    }
+                } else {
+                    android.util.Log.e("KaidahDetail", "API call failed - Code: " + response.code() + ", Message: " + response.message());
+
+                    // Show error message on main thread
+                    if (isAdded() && getActivity() != null) {
+                        getActivity().runOnUiThread(() -> {
+                            Toast.makeText(getContext(), "Gagal sinkron dengan server: " + response.message(), Toast.LENGTH_LONG).show();
+                        });
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(retrofit2.Call<com.khozin.pembelajarankaidah.data.model.ApiResponse<java.util.Map<String, Object>>> call,
+                              Throwable t) {
+                android.util.Log.e("KaidahDetail", "API call failed: " + t.getMessage(), t);
+
+                // Show error message on main thread
+                if (isAdded() && getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        Toast.makeText(getContext(), "Koneksi gagal: " + t.getMessage(), Toast.LENGTH_LONG).show();
+                    });
+                }
+            }
+        });
+
+        android.util.Log.d("KaidahDetail", "=== SYNC MATERI COMPLETION WITH SERVER DEBUG END ===");
     }
 
     /**

@@ -6,8 +6,9 @@ package com.khozin.pembelajarankaidah.network;
 public class ApiConstants {
 
     // Base URL - adjust sesuai development/production
-    public static final String BASE_URL = "http://192.168.1.4:8080/api/"; // Untuk device fisik di jaringan yang sama
+    public static final String BASE_URL = "http://192.168.1.4:8080/api/"; // Server running on port 8080
     // public static final String BASE_URL = "http://192.168.1.100:8080/api/"; // Untuk device fisik (ganti dengan IP laptop)
+    // public static final String BASE_URL = "http://localhost:8080/api/"; // Untuk development lokal
     // public static final String BASE_URL = "https://yourapp.com/api/"; // Production
 
     // API Endpoints
@@ -25,6 +26,7 @@ public class ApiConstants {
     public static final String KAIDAH_DETAIL = "kaidah/{id}";
     public static final String KAIDAH_PROGRESS = "kaidah/{id}/progress";
     public static final String KAIDAH_GROUPED = "kaidah/grouped";
+    public static final String MATERI_COMPLETE = "progress/materi/{id}/complete";
 
     public static final String SESI_START = "sesi/start";
     public static final String SESI_ACTIVE = "sesi/active";
