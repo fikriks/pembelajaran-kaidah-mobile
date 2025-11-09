@@ -2450,6 +2450,19 @@ app/Views/[module]/
    - ✅ **Enhanced Error Handling** - Modified validation to prevent icon conflicts by clearing password field errors
    - ✅ **Clean Professional Design** - Consistent with app's green theme and Material Design principles
 
+10. **Room Database Query Optimization** ⭐⭐⭐
+   - ✅ **Fixed CURSOR_MISMATCH Warnings** - Eliminated all Room Database warnings about unused columns
+   - ✅ **Query Performance Optimization** - Removed unused columns from SELECT statements to improve performance
+   - ✅ **Clean Database Queries** - Optimized MateriKaidahDao, SoalDao, JawabanDao, SesiLatihanDao, and DetailJawabanSiswaDao
+   - ✅ **User Feedback Implementation** - Following user's request to "hapus saja yang unused" instead of suppressing warnings
+   - ✅ **Syntax Error Fixes** - Fixed corrupted method signatures and compilation errors
+   - **Key Optimizations:**
+     - `MateriKaidahDao.getRekomendasiMateri()`: Removed unused JOIN with riwayat_belajar
+     - `SoalDao.getSoalSulitIds()`: Changed to return only IDs instead of full objects
+     - `JawabanDao.getJawabanJarangDipilihIds()`: Optimized to return only IDs
+     - `SesiLatihanDao.getSesiWithMateriInfo()`: Selected only specific needed columns
+     - `DetailJawabanSiswaDao`: Fixed method signature and optimized queries
+
 #### **Web Application (CodeIgniter 4)**
 1. **Authentication System**
    - ✅ Login/Logout with session management
@@ -2605,8 +2618,27 @@ app/Views/[module]/
    - ✅ **Consistent Navigation Flow** - Smooth transitions between materi with proper state management
    - ✅ **Enhanced Error Handling** - User-friendly error messages and recovery options
 
+10. **Navigation Enhancement - Bab Completion Flow** ⭐⭐⭐
+   - ✅ **Fixed Bab Congrats Navigation** - Resolved timing issue when navigating from congratulations to next bab
+   - ✅ **Added Delay for Tab Switching** - 300ms delay ensures proper tab switching before detail navigation
+   - ✅ **Improved Back Stack Management** - Clear back stack to prevent unwanted navigation back
+   - ✅ **Enhanced Logging** - Added detailed logging for debugging navigation flow
+   - ✅ **Direct Materi Navigation** - Now correctly navigates to first materi of next bab instead of just bab list
+
 #### **Technical Improvements (November 2025)**
-7. **Error Handling & Validation System** ⭐⭐⭐
+7. **Room Database Query Optimization** ⭐⭐⭐
+   - ✅ **CURSOR_MISMATCH Warning Elimination** - Fixed all Room Database warnings by removing unused columns
+   - ✅ **Query Performance Enhancement** - Optimized SELECT statements to fetch only required columns
+   - ✅ **Clean Database Architecture** - Improved query efficiency across all DAO classes
+   - ✅ **User-Centric Approach** - Implemented user's preference for removing unused columns instead of suppressing warnings
+   - ✅ **Compilation Error Resolution** - Fixed method signatures and syntax errors in DetailJawabanSiswaDao
+   - **Performance Benefits:**
+     - Reduced memory usage by selecting only needed columns
+     - Faster query execution with optimized SELECT statements
+     - Eliminated unnecessary JOIN operations
+     - Improved database cursor efficiency
+
+8. **Error Handling & Validation System** ⭐⭐⭐
    - ✅ **Advanced Exception Handling** - Try-catch blocks with detailed logging
    - ✅ **Indonesian Validation Messages** - Complete localization for better UX
    - ✅ **Smart Update Detection** - Compares old vs new data to prevent unnecessary updates
@@ -2925,6 +2957,28 @@ password_verify($inputPassword, $hashedPassword);
 ```
 
 ### Android Java Best Practices
+
+#### Build Instructions & Guidelines
+
+**🚨 IMPORTANT: Build Process**
+- **❌ DO NOT use `./gradlew assembleDebug`** - Can cause conflicts and resource issues
+- **✅ USE Android Studio** for building APKs - Recommended approach
+- **✅ USE `./gradlew build`** only for compilation checking
+- **✅ Build manually through Android Studio** → Build → Build Bundle(s) / APK(s) → Build APK(s)
+
+**Build Steps:**
+1. Open project in Android Studio
+2. Sync Gradle files (if prompted)
+3. Build → Clean Project
+4. Build → Rebuild Project (for compilation check)
+5. Build → Build Bundle(s) / APK(s) → Build APK(s) (for final build)
+
+**Why Manual Build?**
+- Prevents resource conflicts
+- Better dependency management
+- Proper ProGuard/R8 optimization
+- Controlled signing process
+- Stable build environment
 
 #### 1. MVVM Architecture Implementation
 ```
@@ -3657,7 +3711,10 @@ X3 = (25 × 16 + 16) mod 100 = 416 mod 100 = 16
 ### Phase 7: Deployment & Documentation (Week 7-8)
 - [ ] Setup production environment
 - [ ] Deploy web application
-- [ ] Build & sign APK untuk mobile
+- [ ] **Build & sign APK untuk mobile (Manual via Android Studio)**
+  - ❌ **Tidak gunakan** `./gradlew assembleDebug`
+  - ✅ **Gunakan** Android Studio → Build → Build Bundle(s) / APK(s) → Build APK(s)
+  - ✅ **Gunakan** `./gradlew build` hanya untuk compilation check
 - [ ] Create user documentation
 - [ ] Create technical documentation
 - [ ] Training untuk admin & guru
@@ -4607,15 +4664,199 @@ Dokumen ini mencakup dokumentasi lengkap untuk proyek **Aplikasi Pembelajaran Ka
 
 **Status Terkini: November 2025**
 - ✅ Backend API selesai dengan `code: 200` di semua response
-- ✅ Android build berhasil tanpa error
+- ✅ Android build tersedia (build manual melalui Android Studio)
 - ✅ Dokumentasi API lengkap tersedia
 - 🚧 Siap untuk testing dan deployment
+
+**Catatan Build Android:**
+- Build aplikasi Android dilakukan secara manual melalui Android Studio
+- Tidak menggunakan `./gradlew assembleDebug` otomatis untuk menghindari konflik
+- Proses build: `./gradlew build` untuk compilation check, build APK melalui Android Studio
+
+---
+
+## 🐛 Bug Fixes & Improvements Log (November 2025)
+
+### **9 November 2025 - Progress Tracking & API Sync Fixes**
+
+#### **Problem 1: Progress Count Always 0% in Kaidah List** ⭐⭐⭐
+**Symptoms:**
+- Bab progress bar menampilkan 0% meskipun sudah ada materi yang selesai
+- Status materi stuck di "Belum Dimulai" tidak berubah
+- Data progress tidak muncul di Android app
+
+**Root Cause Analysis:**
+1. API `/api/progress` menggunakan hardcoded completion_percentage (100, 50, atau 0)
+2. API `/api/kaidah/grouped` tidak mengirim data progress sama sekali
+3. Android code mencari `overview.kaidah_progress` yang tidak ada di response
+
+**Fixes Applied:**
+
+**A. API Progress Calculation (`ProgressController.php:76-131`)**
+```php
+// Before: Hardcoded values
+'completion_percentage' => $status === 'selesai' ? 100 : ($status === 'sedang_belajar' ? 50 : 0),
+
+// After: Real values from database
+$completionPercentage = (float) $riwayat['persentase_penguasaan'];
+if (!empty($kaidahSessions)) {
+    $bestScore = max(array_column($kaidahSessions, 'skor'));
+    if ($bestScore >= 80) {
+        $status = 'selesai';
+        $completionPercentage = 100;
+    } else {
+        $completionPercentage = (float) $bestScore;
+    }
+}
+```
+
+**B. Grouped Kaidah API Enhancement (`KaidahController.php:165-334`)**
+```php
+// Added progress data to each materi
+foreach ($kaidahList as $kaidah) {
+    $riwayat = $this->riwayatBelajarModel
+        ->where('id_siswa', $userId)
+        ->where('id_materi', $kaidah['id_materi'])
+        ->first();
+
+    $progressPercentage = $riwayat ? (float) $riwayat['persentase_penguasaan'] : 0;
+    $status = $riwayat ? $riwayat['status'] : 'belum_dimulai';
+
+    // Add to response
+    $processedKaidah['progress_percentage'] = round($progressPercentage, 2);
+    $processedKaidah['status'] = $status;
+    $processedKaidah['completed'] = $progressPercentage >= 100;
+}
+
+// Calculate Bab progress
+$babProgressPercentage = $totalMateri > 0
+    ? round(($completedMateri / $totalMateri) * 100, 2)
+    : 0;
+```
+
+**C. Progress API Overview Fix (`ProgressController.php:150-163`)**
+```php
+// Added kaidah_progress to overview for Android compatibility
+'overview' => [
+    // ... existing fields
+    'kaidah_progress' => $kaidahProgress  // NEW: Added here
+],
+'kaidah_progress' => $kaidahProgress  // Also kept at root level
+```
+
+**Impact:**
+- ✅ Bab progress bar shows correct percentage
+- ✅ Materi status updates correctly (belum_dimulai → sedang_belajar → selesai)
+- ✅ Completion percentage uses real values from database
+- ✅ No more "kaidah_progress key not found" errors
+
+---
+
+#### **Problem 2: Materi Completion Sync - 404 Not Found** ⭐⭐
+**Symptoms:**
+```
+POST http://192.168.1.4:8080/api/api/progress/materi/2/complete
+→ 404 Not Found: Can't find a route for 'POST: api/api/progress/materi/2/complete'
+```
+
+**Root Cause:**
+Double `/api/api` prefix caused by:
+- `BASE_URL` = `http://192.168.1.4:8080/api/`
+- `MATERI_COMPLETE` = `"api/progress/materi/{id}/complete"`
+- Result: `api/` + `api/progress/...` = `api/api/progress/...` ❌
+
+**Fix Applied:**
+```java
+// ApiConstants.java:29
+// Before:
+public static final String MATERI_COMPLETE = "api/progress/materi/{id}/complete";
+
+// After:
+public static final String MATERI_COMPLETE = "progress/materi/{id}/complete";
+```
+
+**Impact:**
+- ✅ URL sekarang correct: `http://192.168.1.4:8080/api/progress/materi/2/complete`
+- ✅ Route found successfully with 200 OK response
+
+---
+
+#### **Problem 3: Materi Completion Sync - 401 Unauthorized** ⭐⭐
+**Symptoms:**
+```
+POST http://192.168.1.4:8080/api/progress/materi/2/complete
+→ 401 Unauthorized: Token diperlukan
+```
+
+**Root Cause:**
+- Backend API requires Authorization header
+- Android app not sending Authorization header in API call
+
+**Fixes Applied:**
+
+**A. ApiService.java - Add auth parameter**
+```java
+// Before:
+@POST(ApiConstants.MATERI_COMPLETE)
+Call<ApiResponse<Map<String, Object>>> completeMateri(
+    @Path("id") int materiId
+);
+
+// After:
+@POST(ApiConstants.MATERI_COMPLETE)
+Call<ApiResponse<Map<String, Object>>> completeMateri(
+    @Header("Authorization") String authToken,
+    @Path("id") int materiId
+);
+```
+
+**B. KaidahDetailFragment.java - Pass auth token**
+```java
+// Before:
+apiService.completeMateri(materiId);
+
+// After:
+apiService.completeMateri("Bearer " + authToken, materiId);
+```
+
+**Impact:**
+- ✅ API call successful with 200 OK
+- ✅ Progress synced with server correctly
+- ✅ Toast message: "Progress berhasil disinkron dengan server"
+
+---
+
+### **Summary of Changes - 9 November 2025**
+
+**Web Backend (CodeIgniter 4):**
+- ✅ `app/Controllers/API/ProgressController.php` - Fixed completion_percentage calculation
+- ✅ `app/Controllers/API/ProgressController.php` - Added kaidah_progress to overview
+- ✅ `app/Controllers/API/KaidahController.php` - Enhanced grouped API with progress data
+
+**Android App (Java):**
+- ✅ `ApiConstants.java` - Fixed double /api prefix
+- ✅ `ApiService.java` - Added Authorization header parameter
+- ✅ `KaidahDetailFragment.java` - Pass auth token in API call
+
+**Results:**
+- 🎯 **Progress tracking** working correctly across web and mobile
+- 🎯 **Bab progress bars** showing accurate completion percentages
+- 🎯 **Materi status** updating dynamically based on user progress
+- 🎯 **Server sync** functioning with proper authentication
+
+**Testing Status:**
+- ✅ Bab list shows correct progress percentages
+- ✅ Materi status updates (belum_dimulai/sedang_belajar/selesai)
+- ✅ Materi completion syncs to server successfully
+- ✅ No 404 or 401 errors in API calls
+- ✅ Progress data persists across app sessions
 
 ---
 
 **Document Information:**
-- **Last Updated:** 8 November 2025
-- **Version:** 2.1
-- **Status:** Development Complete - Ready for Testing
+- **Last Updated:** 9 November 2025
+- **Version:** 2.2
+- **Status:** Progress Tracking System Fully Functional
 - **Total API Routes:** 11 endpoints
 - **Database Tables:** 6 primary tables seeded
+- **Recent Fixes:** 3 major bugs fixed (Progress calculation, API routing, Authorization)
