@@ -229,11 +229,55 @@ Xn+1 = (a × Xn + c) mod m
 - **RecyclerView Optimization** - DiffUtil untuk efficient updates
 
 ### Build Instructions
-- ❌ **DO NOT use** `./gradlew assembleDebug` - Can cause conflicts
+- ✅ **Debug Build**: `./gradlew assembleDebug` - Development dengan local server
+- ✅ **Release Build**: `./gradlew assembleRelease` - Production dengan automatic signing
 - ✅ **USE Android Studio** for building APKs - Recommended approach
 - ✅ **USE `./gradlew build`** only for compilation check
 
+### Environment Configuration
+**Automatic Environment Switching** based on build type:
+
+#### **Debug Build** (`./gradlew assembleDebug`)
+- **Package**: `com.khozin.pembelajarankaidah.debug`
+- **Environment**: `http://192.168.1.4:8080/api/` (Local Development)
+- **Debug Mode**: Enabled
+- **Minify**: Disabled
+- **Size**: ~9.2MB
+
+#### **Release Build** (`./gradlew assembleRelease`)
+- **Package**: `com.khozin.pembelajarankaidah`
+- **Environment**: `https://pembelajaran-kaidah.minimalmaksimal.my.id/api/` (Production)
+- **Debug Mode**: Enabled for troubleshooting
+- **Minify**: Disabled (for stability)
+- **Size**: ~9.2MB
+- **Signed**: ✅ with keystore
+
+### Keystore Configuration (Local Only)
+**File**: `local.properties` (not committed to Git)
+```properties
+# Keystore Signing Configuration (Local Only - DO NOT COMMIT)
+RELEASE_STORE_FILE=keystore/release.keystore
+RELEASE_STORE_PASSWORD=PembelajaranKaidah2025
+RELEASE_KEY_ALIAS=release
+RELEASE_KEY_PASSWORD=PembelajaranKaidah2025
+```
+
+**Important**:
+- Keystore files are in `.gitignore` for security
+- Each developer needs their own `local.properties`
+- Backup keystore files separately
+- Password: `PembelajaranKaidah2025`
+
 ## 🐛 Recent Bug Fixes (November 2025)
+
+### Build Variants & Environment Configuration (16 Nov 2025)
+1. **Automatic Environment Switching** - Debug vs Release builds with different URLs
+2. **BuildConfig Implementation** - Dynamic URL switching based on build type
+3. **Keystore Management** - Secure local.properties configuration
+4. **APK Signing** - Automatic signing for release builds
+5. **Enhanced Error Handling** - LoginActivity with comprehensive logging
+6. **ProGuard Rules Update** - Fixed missing classes issues for release builds
+7. **Path Configuration** - Fixed keystore file path resolution
 
 ### Branding Consistency & UI Enhancements (15 Nov 2025)
 1. **Logo Consistency** - Applied web logo to Android application for consistent branding

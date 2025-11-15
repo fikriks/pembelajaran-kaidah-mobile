@@ -1,15 +1,20 @@
 package com.khozin.pembelajarankaidah.network;
 
+import com.khozin.pembelajarankaidah.BuildConfig;
+
 /**
  * Konstanta API untuk komunikasi dengan backend
+ * Automatic environment switching based on build type
  */
 public class ApiConstants {
 
-    // Base URL - adjust sesuai development/production
-    public static final String BASE_URL = "https://pembelajaran-kaidah.minimalmaksimal.my.id/api/"; // Production
-    // public static final String BASE_URL = "http://192.168.1.4:8080/api/"; // Server running on port 8080
-    // public static final String BASE_URL = "http://192.168.1.100:8080/api/"; // Untuk device fisik (ganti dengan IP laptop)
-    // public static final String BASE_URL = "http://localhost:8080/api/"; // Untuk development lokal
+    // Base URL - Automatic switching based on build type
+    // Debug build: http://192.168.1.4:8080/api/
+    // Release build: https://pembelajaran-kaidah.minimalmaksimal.my.id/api/
+    public static final String BASE_URL = BuildConfig.BASE_URL;
+
+    // Additional environment configs
+    public static final boolean DEBUG_MODE = BuildConfig.DEBUG_MODE;
 
     // API Endpoints
     public static final String AUTH_LOGIN = "siswa/login";

@@ -44,21 +44,40 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_login);
 
-        // Initialize repository and session manager
-        loginRepository = new LoginRepository(this);
-        sessionManager = new SessionManager(this);
-        executorService = Executors.newSingleThreadExecutor();
+        try {
+            Log.d("LOGIN_DEBUG", "LoginActivity onCreate started");
+            setContentView(R.layout.activity_login);
+            Log.d("LOGIN_DEBUG", "Layout set successfully");
 
-        // Check jika sudah login
-        if (loginRepository.isLoggedIn()) {
-            navigateToMain();
-            return;
+            // Initialize repository and session manager
+            loginRepository = new LoginRepository(this);
+            Log.d("LOGIN_DEBUG", "Repository initialized successfully");
+            sessionManager = new SessionManager(this);
+            Log.d("LOGIN_DEBUG", "SessionManager initialized successfully");
+            executorService = Executors.newSingleThreadExecutor();
+            Log.d("LOGIN_DEBUG", "ExecutorService initialized successfully");
+
+            // Check jika sudah login
+            boolean isLoggedIn = loginRepository.isLoggedIn();
+            Log.d("LOGIN_DEBUG", "Is logged in check: " + isLoggedIn);
+            if (isLoggedIn) {
+                Log.d("LOGIN_DEBUG", "Already logged in, navigating to main");
+                navigateToMain();
+                return;
+            }
+
+            Log.d("LOGIN_DEBUG", "Initializing views...");
+            initViews();
+            Log.d("LOGIN_DEBUG", "Views initialized successfully");
+            setupListeners();
+            Log.d("LOGIN_DEBUG", "Listeners setup successfully");
+
+        } catch (Exception e) {
+            Log.e("LOGIN_DEBUG", "Error in onCreate: " + e.getMessage(), e);
+            showToast("Error initializing app: " + e.getMessage());
+            finish(); // Close activity if initialization fails
         }
-
-        initViews();
-        setupListeners();
     }
 
     /**
