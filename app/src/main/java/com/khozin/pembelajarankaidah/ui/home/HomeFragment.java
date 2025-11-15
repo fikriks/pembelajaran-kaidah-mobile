@@ -16,6 +16,7 @@ import com.google.android.material.card.MaterialCardView;
 import android.widget.ProgressBar;
 import com.khozin.pembelajarankaidah.R;
 import com.khozin.pembelajarankaidah.adapter.KaidahSmallAdapter;
+import com.khozin.pembelajarankaidah.ui.kaidah.KaidahDetailFragment;
 import com.khozin.pembelajarankaidah.data.model.MateriKaidah;
 import com.khozin.pembelajarankaidah.data.model.SesiLatihan;
 import com.khozin.pembelajarankaidah.utils.SessionManager;
@@ -100,6 +101,14 @@ public class HomeFragment extends Fragment {
         rvRecentKaidah.setLayoutManager(new LinearLayoutManager(getContext()));
         rvRecentKaidah.setAdapter(recentKaidahAdapter);
         rvRecentKaidah.setNestedScrollingEnabled(false);
+
+        // Set click listener for kaidah items
+        recentKaidahAdapter.setOnKaidahClickListener(new KaidahSmallAdapter.OnKaidahClickListener() {
+            @Override
+            public void onKaidahClick(MateriKaidah kaidah) {
+                navigateToKaidahDetail(kaidah);
+            }
+        });
     }
 
     /**
@@ -628,6 +637,39 @@ public class HomeFragment extends Fragment {
         // Refresh data when fragment resumes
         if (sessionManager.isLoggedIn()) {
             loadData();
+        }
+    }
+
+    /**
+     * Navigate to kaidah detail
+     */
+    private void navigateToKaidahDetail(MateriKaidah kaidah) {
+        if (getActivity() != null && isAdded()) {
+            try {
+                // Create bundle with kaidah data
+                android.os.Bundle bundle = new android.os.Bundle();
+                bundle.putInt("kaidah_id", kaidah.getIdMateri());
+                bundle.putString("kaidah_title", kaidah.getJudulMateri());
+                bundle.putString("kaidah_description", kaidah.getDeskripsi());
+                bundle.putInt("progress_percentage", kaidah.getProgressPercentage());
+                bundle.putString("status", kaidah.getStatus());
+
+                // Create KaidahDetailFragment instance
+                KaidahDetailFragment detailFragment = new KaidahDetailFragment();
+                detailFragment.setArguments(bundle);
+
+                // Navigate to detail fragment
+                getActivity().getSupportFragmentManager()
+                        .beginTransaction()
+                        .replace(R.id.fragment_container, detailFragment)
+                        .addToBackStack("HomeFragment")
+                        .commit();
+
+                android.util.Log.d("HomeFragment", "Navigating to kaidah detail: " + kaidah.getJudulMateri());
+
+            } catch (Exception e) {
+                android.util.Log.e("HomeFragment", "Error navigating to kaidah detail: " + e.getMessage(), e);
+            }
         }
     }
 
