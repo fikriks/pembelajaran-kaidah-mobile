@@ -7,8 +7,6 @@ import android.text.TextWatcher;
 import android.annotation.SuppressLint;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
-import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -36,8 +34,7 @@ public class LoginActivity extends AppCompatActivity {
     private TextInputEditText etPassword;
     private TextInputLayout tilNis;
     private TextInputLayout tilPassword;
-    private Button btnLogin;
-    private ProgressBar progressIndicator;
+    private MaterialButton btnLogin;
 
     // Business Logic
     private LoginRepository loginRepository;
@@ -73,7 +70,6 @@ public class LoginActivity extends AppCompatActivity {
         tilNis = findViewById(R.id.tilNis);
         tilPassword = findViewById(R.id.tilPassword);
         btnLogin = findViewById(R.id.btnLogin);
-        progressIndicator = findViewById(R.id.progressIndicator);
 
         // Set initial state
         setViewState(true);
@@ -269,10 +265,11 @@ public class LoginActivity extends AppCompatActivity {
 
         if (enabled) {
             btnLogin.setText("Masuk");
-            progressIndicator.setVisibility(View.GONE);
+            btnLogin.setIcon(null);
         } else {
-            btnLogin.setText("Sedang masuk...");
-            progressIndicator.setVisibility(View.VISIBLE);
+            btnLogin.setText("Masuk...");
+            btnLogin.setIconResource(R.drawable.ic_loading_small);
+            btnLogin.setIconGravity(com.google.android.material.button.MaterialButton.ICON_GRAVITY_TEXT_END);
         }
 
         updateLoginButtonState();

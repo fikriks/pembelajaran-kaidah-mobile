@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/loading_state"
+        android:drawable="@drawable/ic_loading_small" />
+    <item
+        android:drawable="@drawable/ic_loading_small" />
+</animated-selector>
