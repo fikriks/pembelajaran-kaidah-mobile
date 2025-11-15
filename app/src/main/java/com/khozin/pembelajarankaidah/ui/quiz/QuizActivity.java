@@ -216,7 +216,7 @@ public class QuizActivity extends AppCompatActivity {
     private void loadQuizQuestions(int kaidahId) {
         // Show loading
         runOnUiThread(() -> {
-            Toast.makeText(this, "Mengambil data soal...", Toast.LENGTH_SHORT).show();
+            // Loading toast dihilangkan
         });
 
         // Get random soal from API
@@ -860,7 +860,7 @@ public class QuizActivity extends AppCompatActivity {
                                 android.util.Log.d("QuizActivity", "Rounded score: " + Math.round(finishedSesi.getSkor()) + " (Integer)");
 
                                 // Show success message with integer score
-                                Toast.makeText(QuizActivity.this, "Quiz selesai! Skor: " + Math.round(finishedSesi.getSkor()) + " tersimpan", Toast.LENGTH_SHORT).show();
+                                // Toast completion dihilangkan
 
                                 // Navigate to results or home with API data
                                 navigateToResult(finishedSesi);

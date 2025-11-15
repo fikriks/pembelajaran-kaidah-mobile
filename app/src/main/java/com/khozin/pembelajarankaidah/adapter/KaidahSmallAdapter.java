@@ -90,13 +90,13 @@ public class KaidahSmallAdapter extends RecyclerView.Adapter<KaidahSmallAdapter.
             // Set progress text
             tvProgress.setText(kaidah.getProgressPercentage() + "%"); // Using simplified logic: 0% or 100%
 
-            // Set status text
-            String status = kaidah.getStatus();
-            if (status == null || status.equals("belum_dimulai")) {
+            // Set status based on progress percentage
+            int progressPercentage = kaidah.getProgressPercentage();
+            if (progressPercentage == 0) {
                 tvStatus.setText("Belum dimulai");
-            } else if (status.equals("sedang_belajar")) {
+            } else if (progressPercentage < 100) {
                 tvStatus.setText("Sedang belajar");
-            } else if (status.equals("selesai")) {
+            } else {
                 tvStatus.setText("Selesai");
             }
 

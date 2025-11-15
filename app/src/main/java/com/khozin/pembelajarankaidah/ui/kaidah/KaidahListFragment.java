@@ -44,7 +44,6 @@ public class KaidahListFragment extends Fragment {
 
     // UI Components
     private RecyclerView rvKaidah;
-    private SearchView searchView;
     private MaterialCardView cardAll, cardBelum, cardSelesai;
     private CircularProgressIndicator progressBar;
     private View emptyStateLayout;
@@ -59,8 +58,7 @@ public class KaidahListFragment extends Fragment {
 
     // Filter states
     private String currentFilter = "all"; // all, belum, sedang, selesai
-    private String currentSearch = "";
-
+    
     // Data holders
     private List<MateriKaidah> allKaidahList = new ArrayList<>();
     private List<KaidahGroup> kaidahGroupList = new ArrayList<>();
@@ -89,7 +87,6 @@ public class KaidahListFragment extends Fragment {
      */
     private void initViews(View view) {
         rvKaidah = view.findViewById(R.id.rvKaidah);
-        searchView = view.findViewById(R.id.searchView);
         progressBar = view.findViewById(R.id.progressBar);
         emptyStateLayout = view.findViewById(R.id.llEmptyState);
         tvEmptyState = emptyStateLayout.findViewById(R.id.tvEmptyTitle);
@@ -140,22 +137,6 @@ public class KaidahListFragment extends Fragment {
      * Setup listeners
      */
     private void setupListeners() {
-        // Search functionality
-        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-            @Override
-            public boolean onQueryTextSubmit(String query) {
-                currentSearch = query;
-                updateDisplayedData();
-                return true;
-            }
-
-            @Override
-            public boolean onQueryTextChange(String newText) {
-                currentSearch = newText;
-                updateDisplayedData();
-                return true;
-            }
-        });
 
         // Filter cards
         cardAll.setOnClickListener(v -> {
@@ -220,7 +201,7 @@ public class KaidahListFragment extends Fragment {
      */
     private void updateGroupedData() {
         // Apply filter to kaidah groups
-        List<KaidahGroup> filteredGroups = filterGroups(kaidahGroupList, currentFilter, currentSearch);
+        List<KaidahGroup> filteredGroups = filterGroups(kaidahGroupList, currentFilter, "");
         kaidahGroupAdapter.updateData(filteredGroups);
 
         // Update empty state
@@ -341,8 +322,8 @@ public class KaidahListFragment extends Fragment {
             rvKaidah.setVisibility(View.GONE);
 
             String message;
-            if (!currentSearch.isEmpty()) {
-                message = "Tidak ada kaidah yang cocok dengan pencarian \"" + currentSearch + "\"";
+            if (viewType.equals("grouped")) {
+                message = "Tidak ada materi kaidah tersedia";
             } else {
                 switch (currentFilter) {
                     case "belum":
