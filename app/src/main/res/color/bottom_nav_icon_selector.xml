@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Active state - putih agar terlihat di atas indicator hijau -->
+    <item android:color="@android:color/white" android:state_checked="true" />
+    <!-- Inactive state - abu-abu -->
+    <item android:color="@color/gray_500" />
+</selector>

@@ -107,7 +107,13 @@ public class QuizResultFragment extends Fragment {
         btnBackToKaidah.setOnClickListener(v -> {
             // Kembali ke layar kaidah
             if (getActivity() != null) {
-                // Finish the QuizActivity to return to the main app
+                // Start MainActivity with kaidah tab selected
+                android.content.Intent intent = new android.content.Intent(getActivity(), com.khozin.pembelajarankaidah.MainActivity.class);
+                intent.setFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP | android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                intent.putExtra("navigate_to_kaidah", true);
+                startActivity(intent);
+
+                // Finish current QuizActivity
                 getActivity().finish();
             }
         });

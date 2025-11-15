@@ -67,6 +67,33 @@ public class MainActivity extends AppCompatActivity implements BabCongratsFragme
 
         initViews();
         setupNavigation();
+
+        // Handle navigation from QuizResultFragment
+        handleQuizResultNavigation();
+    }
+
+    /**
+     * Handle navigation from QuizResultFragment
+     */
+    private void handleQuizResultNavigation() {
+        android.content.Intent intent = getIntent();
+        if (intent != null && intent.getBooleanExtra("navigate_to_kaidah", false)) {
+            android.util.Log.d("MainActivity", "🎯 QuizResultFragment requested navigation to kaidah tab");
+
+            // Navigate to kaidah tab with a slight delay to ensure UI is ready
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                if (bottomNavigation != null) {
+                    // Set flag to prevent listener interference
+                    isProgrammaticNavigation = true;
+                    bottomNavigation.setSelectedItemId(R.id.navigation_kaidah);
+
+                    // Ensure the correct fragment is loaded
+                    android.util.Log.d("MainActivity", "🔄 Loading KaidahListFragment from quiz results navigation");
+                    loadFragment(new com.khozin.pembelajarankaidah.ui.kaidah.KaidahListFragment());
+                    android.util.Log.d("MainActivity", "✅ Navigated to kaidah tab and loaded KaidahListFragment from quiz results");
+                }
+            }, 100);
+        }
     }
 
     /**

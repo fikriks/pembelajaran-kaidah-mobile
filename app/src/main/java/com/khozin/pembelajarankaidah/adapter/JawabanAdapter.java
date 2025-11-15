@@ -101,10 +101,10 @@ public class JawabanAdapter extends RecyclerView.Adapter<JawabanAdapter.ViewHold
 
             // Update UI based on selection
             if (isSelected) {
-                // Selected state
+                // Selected state - only border + check icon, no fill color
                 cardJawaban.setStrokeWidth(3);
                 cardJawaban.setStrokeColor(rootView.getContext().getResources().getColor(R.color.primary_green));
-                cardJawaban.setCardBackgroundColor(rootView.getContext().getResources().getColor(R.color.primary_green_light));
+                cardJawaban.setCardBackgroundColor(rootView.getContext().getResources().getColor(android.R.color.white));
                 tvOptionLetter.setTextColor(rootView.getContext().getResources().getColor(R.color.primary_green));
                 tvJawaban.setTextColor(rootView.getContext().getResources().getColor(R.color.primary_green_dark));
                 ivCheck.setVisibility(View.VISIBLE);

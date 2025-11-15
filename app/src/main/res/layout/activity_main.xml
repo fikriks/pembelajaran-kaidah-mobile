@@ -25,7 +25,7 @@
         android:layout_marginStart="0dp"
         android:layout_marginEnd="0dp"
         android:background="@color/background_card"
-        app:itemIconTint="@color/primary_green"
+        app:itemIconTint="@color/bottom_nav_icon_color"
         app:itemTextColor="@color/primary_green"
         app:itemActiveIndicatorStyle="@style/Widget.PembelajaranKaidah.BottomNavigation.ActiveIndicator"
         app:labelVisibilityMode="labeled"
