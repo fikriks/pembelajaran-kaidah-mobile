@@ -22,6 +22,7 @@ import com.khozin.pembelajarankaidah.network.RetrofitClient;
 import com.khozin.pembelajarankaidah.ui.kaidah.KaidahListFragment;
 
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Fragment untuk menampilkan daftar Bab/Chapter
@@ -124,7 +125,7 @@ public class BabListFragment extends Fragment implements BabAdapter.OnChapterCli
 
     private void loadChapters() {
         // Try to load from local first
-        babViewModel.loadChaptersFromLocal();
+        // TODO: Replace with API call - babViewModel.loadChaptersFromAPI();
 
         // Then refresh from API
         babViewModel.refreshChapters();

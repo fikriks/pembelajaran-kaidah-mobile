@@ -11,6 +11,7 @@ import android.widget.Toast;
 import android.util.Log;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.Executors;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -23,8 +24,6 @@ import com.khozin.pembelajarankaidah.data.model.MateriKaidah;
 import com.khozin.pembelajarankaidah.data.model.Bab;
 import com.khozin.pembelajarankaidah.data.model.RiwayatBelajar;
 import com.khozin.pembelajarankaidah.data.model.KaidahListResponse;
-import com.khozin.pembelajarankaidah.database.AppDatabase;
-import com.khozin.pembelajarankaidah.database.dao.MateriKaidahDao;
 import com.khozin.pembelajarankaidah.utils.SessionManager;
 import com.khozin.pembelajarankaidah.data.remote.ApiService;
 import com.khozin.pembelajarankaidah.network.RetrofitClient;
@@ -52,7 +51,6 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
     private TextView tvCurrentMateriInfo;
 
     // Data
-    private AppDatabase database;
     private SessionManager sessionManager;
     private ApiService apiService;
     private BabProgressHelper babProgressHelper;
@@ -125,7 +123,6 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
      */
     private void setupDatabase() {
         sessionManager = new SessionManager(requireContext());
-        database = AppDatabase.getDatabase(requireContext());
         apiService = RetrofitClient.getInstance().getRetrofit().create(ApiService.class);
         babProgressHelper = new BabProgressHelper(requireContext());
     }
@@ -196,7 +193,7 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
 
         
         // Set judul
-        tvJudulKaidah.setText(kaidah.getJudulKaidah());
+        tvJudulKaidah.setText(kaidah.getJudulMateri());
 
         // Set deskripsi
         String deskripsi = kaidah.getDeskripsi();
@@ -241,7 +238,7 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
             android.util.Log.d("KaidahDetail", "allKaidahList size: " + allKaidahList.size());
             android.util.Log.d("KaidahDetail", "currentKaidah ID: " + currentKaidah.getIdMateri());
             android.util.Log.d("KaidahDetail", "currentKaidah Bab ID: " + currentKaidah.getIdBab());
-            android.util.Log.d("KaidahDetail", "currentKaidah Judul: " + currentKaidah.getJudulKaidah());
+            android.util.Log.d("KaidahDetail", "currentKaidah Judul: " + currentKaidah.getJudulMateri());
             android.util.Log.d("KaidahDetail", "currentKaidahIndex: " + currentKaidahIndex);
 
             // Log all items in allKaidahList for debugging
@@ -250,7 +247,7 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
                 MateriKaidah materi = allKaidahList.get(i);
                 android.util.Log.d("KaidahDetail", "allKaidahList[" + i + "]: ID=" + materi.getIdMateri() +
                         ", Bab=" + materi.getIdBab() + ", Urutan=" + materi.getUrutan() +
-                        ", Judul=" + materi.getJudulKaidah());
+                        ", Judul=" + materi.getJudulMateri());
             }
 
             // Get all materi in current bab
@@ -284,7 +281,7 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
                 MateriKaidah materi = materiInCurrentBab.get(i);
                 android.util.Log.d("KaidahDetail", "materiInCurrentBab[" + i + "]: ID=" + materi.getIdMateri() +
                         ", Bab=" + materi.getIdBab() + ", Urutan=" + materi.getUrutan() +
-                        ", Judul=" + materi.getJudulKaidah());
+                        ", Judul=" + materi.getJudulMateri());
             }
 
             // Update current materi info based on bab
@@ -494,8 +491,8 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
      */
     private void checkBabCompletionAndNavigate(MateriKaidah nextMateri) {
         android.util.Log.d("KaidahDetail", "=== checkBabCompletionAndNavigate() START ===");
-        android.util.Log.d("KaidahDetail", "Current materi: " + currentKaidah.getJudulKaidah());
-        android.util.Log.d("KaidahDetail", "Next materi: " + (nextMateri != null ? nextMateri.getJudulKaidah() : "None (Last materi)"));
+        android.util.Log.d("KaidahDetail", "Current materi: " + currentKaidah.getJudulMateri());
+        android.util.Log.d("KaidahDetail", "Next materi: " + (nextMateri != null ? nextMateri.getJudulMateri() : "None (Last materi)"));
 
         if (currentKaidah == null || allKaidahList == null) {
             android.util.Log.e("KaidahDetail", "Current kaidah or allKaidahList is null");
@@ -550,7 +547,7 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
                         // Show congratulations fragment for completed bab
                         MateriKaidah nextBab = !nextBabMateri.isEmpty() ? nextBabMateri.get(0) : null;
                         android.util.Log.d("KaidahDetail", "Showing congratulations fragment. Next bab: " +
-                            (nextBab != null ? nextBab.getJudulKaidah() : "None"));
+                            (nextBab != null ? nextBab.getJudulMateri() : "None"));
 
                         if (isAdded() && getActivity() != null) {
                             getActivity().runOnUiThread(() -> {
@@ -658,7 +655,7 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
             return;
         }
 
-        android.util.Log.d("KaidahDetail", "Current materi: " + currentKaidah.getJudulKaidah() + ", Bab ID: " + currentKaidah.getIdBab());
+        android.util.Log.d("KaidahDetail", "Current materi: " + currentKaidah.getJudulMateri() + ", Bab ID: " + currentKaidah.getIdBab());
 
         // Get all materi in current bab
         List<MateriKaidah> materiInBab = new ArrayList<>();
@@ -693,7 +690,7 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
 
                         // Always show congratulations fragment when bab is completed
                         MateriKaidah nextBab = !nextBabMateri.isEmpty() ? nextBabMateri.get(0) : null;
-                        android.util.Log.d("KaidahDetail", "Showing congratulations fragment for completed bab. Next bab: " + (nextBab != null ? nextBab.getJudulKaidah() : "None"));
+                        android.util.Log.d("KaidahDetail", "Showing congratulations fragment for completed bab. Next bab: " + (nextBab != null ? nextBab.getJudulMateri() : "None"));
                         showCongratulationsFragment(currentKaidah, nextBab, completedMateri, totalMateri);
                     } else {
                         // Bab not completed yet, show simple toast
@@ -736,7 +733,7 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
                                              int completedMateri, int totalMateri) {
         try {
             android.util.Log.d("KaidahDetail", "=== showCongratulationsFragment() START ===");
-            android.util.Log.d("KaidahDetail", "Current materi: " + currentMateri.getJudulKaidah() +
+            android.util.Log.d("KaidahDetail", "Current materi: " + currentMateri.getJudulMateri() +
                               " (Bab ID: " + currentMateri.getIdBab() + ")");
 
             // Convert MateriKaidah to Bab objects
@@ -792,7 +789,7 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
 
         try {
             android.util.Log.d("KaidahDetail", "🔍 Looking for Bab with ID: " + materi.getIdBab() +
-                              " from materi: " + materi.getJudulKaidah());
+                              " from materi: " + materi.getJudulMateri());
 
             // If allBabList is not available, create a temporary Bab from materi data
             if (allBabList == null || allBabList.isEmpty()) {
@@ -920,7 +917,7 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
                     if (!nextBabMateriList.isEmpty()) {
                         // Get the first materi from the next bab
                         MateriKaidah firstMateriNextBab = nextBabMateriList.get(0);
-                        android.util.Log.d("KaidahDetail", "Found first materi of next bab: " + firstMateriNextBab.getJudulKaidah());
+                        android.util.Log.d("KaidahDetail", "Found first materi of next bab: " + firstMateriNextBab.getJudulMateri());
 
                         // Navigate to the first materi of the next bab
                         if (isAdded() && getActivity() != null) {
@@ -974,8 +971,6 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
             // Create a semaphore to wait for async call
             java.util.concurrent.Semaphore semaphore = new java.util.concurrent.Semaphore(0);
             final boolean[] success = {false};
-            final AppDatabase finalDatabase = database; // Create final copy for lambda
-            final MateriKaidahDao finalMateriKaidahDao = finalDatabase.materiKaidahDao(); // Create final DAO for lambda
 
             // Load all kaidah from API and find the specific one
             apiService.getKaidahListWithWrapper().enqueue(new Callback<KaidahListResponse>() {
@@ -997,7 +992,7 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
                                 }
 
                                 if (foundKaidah != null) {
-                                    android.util.Log.d("KaidahDetail", "Found materi in API: " + foundKaidah.getJudulKaidah());
+                                    android.util.Log.d("KaidahDetail", "Found materi in API: " + foundKaidah.getJudulMateri());
 
                                     // Create final copy for lambda
                                     final MateriKaidah finalFoundKaidah = foundKaidah;
@@ -1089,7 +1084,7 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
                             MateriKaidah kaidah = kaidahList.get(i);
                             android.util.Log.d("KaidahDetail", "Fresh API Kaidah[" + i + "]: ID=" + kaidah.getIdMateri() +
                                     ", Bab=" + kaidah.getIdBab() + ", Urutan=" + kaidah.getUrutan() +
-                                    ", Judul=" + kaidah.getJudulKaidah());
+                                    ", Judul=" + kaidah.getJudulMateri());
                         }
 
                         // Find the specific kaidah by ID
@@ -1102,7 +1097,7 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
                         }
 
                         if (foundKaidah != null) {
-                            android.util.Log.d("KaidahDetail", "Found kaidah in fresh API data: " + foundKaidah.getJudulKaidah());
+                            android.util.Log.d("KaidahDetail", "Found kaidah in fresh API data: " + foundKaidah.getJudulMateri());
 
                             // Create final copies for lambda
                             final MateriKaidah finalKaidah = foundKaidah;
@@ -1172,10 +1167,15 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
     /**
      * Mark current materi as completed
      */
+    private volatile boolean isMarkingCompleted = false;
+
     private void markCurrentMateriAsCompleted() {
-        if (currentKaidah == null || !sessionManager.isLoggedIn()) {
+        if (currentKaidah == null || !sessionManager.isLoggedIn() || isMarkingCompleted) {
             return;
         }
+
+        // Prevent double execution
+        isMarkingCompleted = true;
 
         // Update local data immediately
         currentKaidah.setProgressPercentage(100);
@@ -1195,59 +1195,19 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
             try {
                 int siswaId = sessionManager.getUserId();
                 if (siswaId == -1) {
+                    isMarkingCompleted = false;
                     return;
                 }
 
-                // Verify siswa exists or create from session
-                com.khozin.pembelajarankaidah.data.model.Siswa siswa = database.siswaDao().getById(siswaId);
-                if (siswa == null) {
-                    siswa = createSiswaFromSessionData(siswaId);
-                    if (siswa == null) {
-                        return;
-                    }
-                }
-
-                // Skip database update, using API directly
-
-                // Create or update riwayat belajar record
-                RiwayatBelajar existingRiwayat = database.riwayatBelajarDao().getTerakhirBySiswaAndMateri(siswaId, currentMateriId);
-
-                if (existingRiwayat != null) {
-                    // Update existing riwayat
-                    existingRiwayat.setPersentasePenguasaan(100.0f);
-                    existingRiwayat.setStatus("selesai");
-                    existingRiwayat.setWaktuDiubah(java.text.DateFormat.getDateTimeInstance().format(new java.util.Date()));
-                    database.riwayatBelajarDao().update(existingRiwayat);
-                } else {
-                    // Create new riwayat
-                    RiwayatBelajar newRiwayat = new RiwayatBelajar();
-                    newRiwayat.setIdSiswa(siswaId);
-                    newRiwayat.setIdMateri(currentMateriId);
-                    newRiwayat.setMateriJudul(currentKaidah.getJudulKaidah());
-                    newRiwayat.setStatus("selesai");
-                    newRiwayat.setPersentasePenguasaan(100.0f);
-                    newRiwayat.setWaktuDiubah(java.text.DateFormat.getDateTimeInstance().format(new java.util.Date()));
-
-                    try {
-                        database.riwayatBelajarDao().insert(newRiwayat);
-                    } catch (Exception e) {
-                        // Try update if insert fails
-                        RiwayatBelajar duplicateRiyat = database.riwayatBelajarDao().getTerakhirBySiswaAndMateri(siswaId, currentMateriId);
-                        if (duplicateRiyat != null) {
-                            duplicateRiyat.setStatus("selesai");
-                            duplicateRiyat.setPersentasePenguasaan(100.0f);
-                            duplicateRiyat.setWaktuDiubah(java.text.DateFormat.getDateTimeInstance().format(new java.util.Date()));
-                            database.riwayatBelajarDao().update(duplicateRiyat);
-                        }
-                    }
-                }
-
-                // Sync with server API
+                // API-only approach - sync with server API directly
                 syncMateriCompletionWithServer(currentMateriId);
 
             } catch (Exception e) {
                 // Log error but don't interrupt flow
                 android.util.Log.e("KaidahDetail", "Error marking materi as completed: " + e.getMessage(), e);
+            } finally {
+                // Reset flag regardless of outcome
+                isMarkingCompleted = false;
             }
         }).start();
     }
@@ -1378,19 +1338,9 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
             newSiswa.setWaktuDibuat(sessionSiswa.getWaktuDibuat());
             newSiswa.setWaktuDiubah(sessionSiswa.getWaktuDiubah());
 
-            // Insert into database
-            long insertResult = database.siswaDao().insert(newSiswa);
-            android.util.Log.d("KaidahDetail", "Siswa record inserted with result: " + insertResult);
-
-            // Verify the insertion
-            com.khozin.pembelajarankaidah.data.model.Siswa insertedSiswa = database.siswaDao().getById(siswaId);
-            if (insertedSiswa != null) {
-                android.util.Log.d("KaidahDetail", "Siswa record successfully created and verified: " + insertedSiswa.getNamaLengkap());
-                return insertedSiswa;
-            } else {
-                android.util.Log.e("KaidahDetail", "Failed to verify inserted siswa record");
-                return null;
-            }
+            // Database operations removed - API only approach
+            android.util.Log.d("KaidahDetail", "Siswa data handled via API only");
+            return newSiswa;
 
         } catch (Exception e) {
             android.util.Log.e("KaidahDetail", "Error creating siswa from session data: " + e.getMessage(), e);
@@ -1429,11 +1379,11 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
         }
 
         // Sort materi by urutan
-        java.util.Collections.sort(materiInBab, (a, b) -> Integer.compare(a.getUrutan(), b.getUrutan()));
+        java.util.Collections.sort(materiInBab, (a, b) -> Integer.compare(a.getUrutanAsInt(), b.getUrutanAsInt()));
 
         // Get the first materi
         MateriKaidah firstMateri = materiInBab.get(0);
-        android.util.Log.d("KaidahDetail", "Found first materi: " + firstMateri.getJudulKaidah() +
+        android.util.Log.d("KaidahDetail", "Found first materi: " + firstMateri.getJudulMateri() +
                           " (Urutan: " + firstMateri.getUrutan() + ")");
 
         // Navigate to the first materi

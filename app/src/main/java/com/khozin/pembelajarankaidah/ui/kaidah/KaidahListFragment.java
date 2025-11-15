@@ -25,12 +25,12 @@ import com.khozin.pembelajarankaidah.data.model.KaidahGroup;
 import com.khozin.pembelajarankaidah.data.model.KaidahListResponse;
 import com.khozin.pembelajarankaidah.data.model.KaidahGroupedResponse;
 import com.khozin.pembelajarankaidah.data.model.ApiResponse;
-import com.khozin.pembelajarankaidah.database.AppDatabase;
 import com.khozin.pembelajarankaidah.utils.SessionManager;
 import com.khozin.pembelajarankaidah.data.remote.ApiService;
 import com.khozin.pembelajarankaidah.network.RetrofitClient;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.Executors;
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -51,7 +51,6 @@ public class KaidahListFragment extends Fragment {
     private TextView tvEmptyState;
 
     // Data
-    private AppDatabase database;
     private SessionManager sessionManager;
     private KaidahAdapter kaidahAdapter;
     private KaidahGroupAdapter kaidahGroupAdapter; // Keep for grouped display
@@ -106,7 +105,6 @@ public class KaidahListFragment extends Fragment {
      */
     private void setupDatabase() {
         sessionManager = new SessionManager(requireContext());
-        database = AppDatabase.getDatabase(requireContext());
         apiService = RetrofitClient.getInstance().getRetrofit().create(ApiService.class);
     }
 
@@ -248,7 +246,7 @@ public class KaidahListFragment extends Fragment {
                     // If group doesn't match search, check individual kaidah
                     List<MateriKaidah> matchingKaidah = new ArrayList<>();
                     for (MateriKaidah kaidah : group.getKaidahList()) {
-                        if (kaidah.getJudulKaidah().toLowerCase().contains(searchQuery) ||
+                        if (kaidah.getJudulMateri().toLowerCase().contains(searchQuery) ||
                             kaidah.getDeskripsi().toLowerCase().contains(searchQuery)) {
                             matchingKaidah.add(kaidah);
                         }
@@ -310,7 +308,7 @@ public class KaidahListFragment extends Fragment {
             String searchQuery = search.toLowerCase().trim();
             filteredList = filteredList.stream()
                     .filter(kaidah ->
-                        kaidah.getJudulKaidah().toLowerCase().contains(searchQuery) ||
+                        kaidah.getJudulMateri().toLowerCase().contains(searchQuery) ||
                         kaidah.getDeskripsi().toLowerCase().contains(searchQuery))
                     .collect(java.util.stream.Collectors.toList());
         }
@@ -518,9 +516,9 @@ public class KaidahListFragment extends Fragment {
             "Navigating to kaidah detail:\n" +
             "ID Materi: %d\n" +
             "Judul: %s\n" +
-            "Urutan: %d",
+            "Urutan: %s",
             kaidah.getIdMateri(),
-            kaidah.getJudulKaidah(),
+            kaidah.getJudulMateri(),
             kaidah.getUrutan()
         ));
 
@@ -593,9 +591,10 @@ public class KaidahListFragment extends Fragment {
 
         try {
             int siswaId = sessionManager.getUserId();
-            List<MateriKaidah> localMateriList = database.materiKaidahDao().getMateriWithProgressSync(siswaId);
+            // TODO: Replace with API call - List<MateriKaidah> localMateriList = database.materiKaidahDao().getMateriWithProgressSync(siswaId);
+            List<MateriKaidah> localMateriList = new java.util.ArrayList<>(); // Placeholder for API call
 
-            Log.d("KAIDAH_DEBUG", "Local database has " + localMateriList.size() + " materi with progress");
+            Log.d("KAIDAH_DEBUG", "Local database materi progress check");
 
             // Create a map for quick lookup
             java.util.Map<Integer, MateriKaidah> localMateriMap = new java.util.HashMap<>();
@@ -614,7 +613,7 @@ public class KaidahListFragment extends Fragment {
                             apiMateri.setProgressPercentage(localMateri.getProgressPercentage());
                             apiMateri.setCompleted(localMateri.isCompleted());
 
-                            Log.d("KAIDAH_DEBUG", "Updated progress for materi " + apiMateri.getJudulKaidah() +
+                            Log.d("KAIDAH_DEBUG", "Updated progress for materi " + apiMateri.getJudulMateri() +
                                   ": " + localMateri.getProgressPercentage() + "%");
                             updatedCount++;
                         }
@@ -729,7 +728,7 @@ public class KaidahListFragment extends Fragment {
                                 String status = safeParseString(progressData.get("status"));
 
                                 android.util.Log.d("KAIDAH_DEBUG", "Updating kaidah " + apiMateri.getIdMateri() +
-                                    ": " + apiMateri.getJudulKaidah() + " - status: " + status +
+                                    ": " + apiMateri.getJudulMateri() + " - status: " + status +
                                     ", progress: " + progressPercentage + "%");
 
                                 if (progressPercentage != null) {
@@ -747,13 +746,13 @@ public class KaidahListFragment extends Fragment {
                                         apiMateri.setStatus("belum_dimulai");
                                     }
 
-                                    android.util.Log.d("KAIDAH_DEBUG", "Updated progress for materi " + apiMateri.getJudulKaidah() +
+                                    android.util.Log.d("KAIDAH_DEBUG", "Updated progress for materi " + apiMateri.getJudulMateri() +
                                               ": " + progressPercentage + "% - " + apiMateri.getStatus());
                                     updatedCount++;
                                 }
                             } else {
                                 android.util.Log.d("KAIDAH_DEBUG", "No progress data found for kaidah " + apiMateri.getIdMateri() +
-                                    ": " + apiMateri.getJudulKaidah() + ", keeping status: " + apiMateri.getStatus());
+                                    ": " + apiMateri.getJudulMateri() + ", keeping status: " + apiMateri.getStatus());
                             }
                         }
                     }

@@ -1,97 +1,53 @@
 package com.khozin.pembelajarankaidah.data.model;
 
-import androidx.room.Entity;
-import androidx.room.PrimaryKey;
-import androidx.room.ColumnInfo;
-import androidx.room.ForeignKey;
-import androidx.room.Ignore;
-import androidx.room.Relation;
-import androidx.room.Index;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.google.gson.annotations.SerializedName;
-import java.util.List;
+import java.io.Serializable;
 
 /**
- * Entity Soal untuk tabel soal
- * Sesuai database schema di CLAUDE.md
+ * Model Soal untuk tabel soal
+ * API-only model - tidak menggunakan Room Database
  */
-@Entity(tableName = "soal",
-        indices = {
-            @Index(value = {"id_bab"}),
-            @Index(value = {"id_bab", "tingkat_kesulitan"})
-        },
-        foreignKeys = @ForeignKey(entity = Bab.class,
-                parentColumns = "id_bab",
-                childColumns = "id_bab",
-                onDelete = ForeignKey.CASCADE))
-public class Soal {
+public class Soal implements Serializable {
 
-    @PrimaryKey(autoGenerate = true)
-    @ColumnInfo(name = "id_soal")
+    @SerializedName("id_soal")
     private int idSoal;
 
-    @ColumnInfo(name = "id_bab")
-    private int idBab;
+    @SerializedName("id_materi")
+    private int idMateri;
 
-    @SerializedName("pertanyaan")
-    @NonNull
-    @ColumnInfo(name = "pertanyaan")
-    private String pertanyaan;
+    @SerializedName("teks_soal")
+    private String teksSoal;
 
     @SerializedName("tipe_soal")
-    @NonNull
-    @ColumnInfo(name = "tipe_soal")
-    private String tipeSoal; // pilihan_ganda
+    private String tipeSoal;
 
     @SerializedName("tingkat_kesulitan")
-    @NonNull
-    @ColumnInfo(name = "tingkat_kesulitan")
-    private String tingkatKesulitan; // mudah, sedang, sulit
+    private String tingkatKesulitan;
 
-    @ColumnInfo(name = "poin")
-    private int poin;
+    @SerializedName("is_active")
+    private String isActive;
 
-    @ColumnInfo(name = "dibuat_oleh")
-    private int dibuatOleh;
+    // Additional fields for mobile app
+    @SerializedName("created_at")
+    private String createdAt;
 
-    @SerializedName("waktu_dibuat")
-    @ColumnInfo(name = "waktu_dibuat")
-    private String waktuDibuat;
+    @SerializedName("updated_at")
+    private String updatedAt;
 
-    @SerializedName("waktu_diubah")
-    @ColumnInfo(name = "waktu_diubah")
-    private String waktuDiubah;
-
-    // Additional fields untuk mobile app
-    @ColumnInfo(name = "urutan_dalam_sesi")
-    private int urutanDalamSesi;
-
-    @ColumnInfo(name = "is_answered")
-    private boolean isAnswered = false;
-
-    @ColumnInfo(name = "selected_jawaban_id")
-    private int selectedJawabanId = -1;
-
-    // Note: pilihanJawaban is handled via separate queries, not stored in database entity
-    @Ignore
-    private List<Jawaban> pilihanJawaban;
-
-    // Default constructor
+    // Constructor
     public Soal() {
         this.tipeSoal = "pilihan_ganda";
-        this.tingkatKesulitan = "mudah";
-        this.poin = 10;
+        this.tingkatKesulitan = "sedang";
+        this.isActive = "1";
     }
 
-    // Constructor minimal
-    @Ignore
-    public Soal(int idBab, String pertanyaan, String tingkatKesulitan, int poin) {
-        this.idBab = idBab;
-        this.pertanyaan = pertanyaan;
-        this.tingkatKesulitan = tingkatKesulitan;
-        this.poin = poin;
-        this.tipeSoal = "pilihan_ganda";
+    // Constructor with parameters
+    public Soal(int idMateri, String teksSoal) {
+        this();
+        this.idMateri = idMateri;
+        this.teksSoal = teksSoal;
     }
 
     // Getters and Setters
@@ -103,40 +59,169 @@ public class Soal {
         this.idSoal = idSoal;
     }
 
-    public int getIdBab() {
-        return idBab;
+    public int getIdMateri() {
+        return idMateri;
     }
 
-    public void setIdBab(int idBab) {
-        this.idBab = idBab;
+    public void setIdMateri(int idMateri) {
+        this.idMateri = idMateri;
     }
 
-    @NonNull
-    public String getPertanyaan() {
-        return pertanyaan;
+    public String getTeksSoal() {
+        return teksSoal;
     }
 
-    public void setPertanyaan(@NonNull String pertanyaan) {
-        this.pertanyaan = pertanyaan;
+    public void setTeksSoal(String teksSoal) {
+        this.teksSoal = teksSoal;
     }
 
-    @NonNull
     public String getTipeSoal() {
         return tipeSoal;
     }
 
-    public void setTipeSoal(@NonNull String tipeSoal) {
+    public void setTipeSoal(String tipeSoal) {
         this.tipeSoal = tipeSoal;
     }
 
-    @NonNull
     public String getTingkatKesulitan() {
         return tingkatKesulitan;
     }
 
-    public void setTingkatKesulitan(@NonNull String tingkatKesulitan) {
+    public void setTingkatKesulitan(String tingkatKesulitan) {
         this.tingkatKesulitan = tingkatKesulitan;
     }
+
+    public String getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(String isActive) {
+        this.isActive = isActive;
+    }
+
+    public boolean isActive() {
+        return "1".equals(isActive);
+    }
+
+    public String getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(String createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public String getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(String updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    /**
+     * Check if soal contains Arabic text
+     */
+    public boolean isArabicText() {
+        if (teksSoal != null) {
+            for (int i = 0; i < teksSoal.length(); i++) {
+                char c = teksSoal.charAt(i);
+                if (c >= 0x0600 && c <= 0x06FF) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Get display text (clean from HTML tags if any)
+     */
+    public String getDisplayText() {
+        if (teksSoal == null) return "";
+        // Remove basic HTML tags if present
+        return teksSoal.replaceAll("<[^>]*>", "").trim();
+    }
+
+    /**
+     * Get short question for preview
+     */
+    public String getShortQuestion() {
+        String text = getDisplayText();
+        if (text.length() > 100) {
+            return text.substring(0, 97) + "...";
+        }
+        return text;
+    }
+
+    /**
+     * Get difficulty level as color
+     */
+    public String getDifficultyColor() {
+        if ("mudah".equals(tingkatKesulitan)) {
+            return "#4CAF50"; // Green
+        } else if ("sedang".equals(tingkatKesulitan)) {
+            return "#FF9800"; // Orange
+        } else if ("sulit".equals(tingkatKesulitan)) {
+            return "#F44336"; // Red
+        }
+        return "#2196F3"; // Blue default
+    }
+
+    /**
+     * Get question type display text
+     */
+    public String getTipeSoalDisplay() {
+        if ("pilihan_ganda".equals(tipeSoal)) {
+            return "Pilihan Ganda";
+        } else if ("essay".equals(tipeSoal)) {
+            return "Essay";
+        } else if ("benar_salah".equals(tipeSoal)) {
+            return "Benar/Salah";
+        }
+        return tipeSoal;
+    }
+
+    @Override
+    public String toString() {
+        return "Soal{" +
+                "idSoal=" + idSoal +
+                ", idMateri=" + idMateri +
+                ", tipeSoal='" + tipeSoal + '\'' +
+                ", tingkatKesulitan='" + tingkatKesulitan + '\'' +
+                ", isActive='" + isActive + '\'' +
+                '}';
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+
+        Soal soal = (Soal) obj;
+        return idSoal == soal.idSoal;
+    }
+
+    @Override
+    public int hashCode() {
+        return idSoal;
+    }
+
+    // Legacy method aliases for backward compatibility
+    public String getPertanyaan() {
+        return getTeksSoal();
+    }
+
+    public void setPertanyaan(String pertanyaan) {
+        setTeksSoal(pertanyaan);
+    }
+
+    public void setIdBab(int idBab) {
+        // Note: Soal model doesn't have idBab field in API-only version
+        // This method is for compatibility only
+    }
+
+    private int poin = 0; // Additional field for compatibility
 
     public int getPoin() {
         return poin;
@@ -144,154 +229,5 @@ public class Soal {
 
     public void setPoin(int poin) {
         this.poin = poin;
-    }
-
-    public int getDibuatOleh() {
-        return dibuatOleh;
-    }
-
-    public void setDibuatOleh(int dibuatOleh) {
-        this.dibuatOleh = dibuatOleh;
-    }
-
-    public String getWaktuDibuat() {
-        return waktuDibuat;
-    }
-
-    public void setWaktuDibuat(String waktuDibuat) {
-        this.waktuDibuat = waktuDibuat;
-    }
-
-    public String getWaktuDiubah() {
-        return waktuDiubah;
-    }
-
-    public void setWaktuDiubah(String waktuDiubah) {
-        this.waktuDiubah = waktuDiubah;
-    }
-
-    @Nullable
-    public List<Jawaban> getPilihanJawaban() {
-        return pilihanJawaban;
-    }
-
-    public void setPilihanJawaban(@Nullable List<Jawaban> pilihanJawaban) {
-        this.pilihanJawaban = pilihanJawaban;
-    }
-
-    public int getUrutanDalamSesi() {
-        return urutanDalamSesi;
-    }
-
-    public void setUrutanDalamSesi(int urutanDalamSesi) {
-        this.urutanDalamSesi = urutanDalamSesi;
-    }
-
-    public boolean isAnswered() {
-        return isAnswered;
-    }
-
-    public void setAnswered(boolean answered) {
-        isAnswered = answered;
-    }
-
-    public int getSelectedJawabanId() {
-        return selectedJawabanId;
-    }
-
-    public void setSelectedJawabanId(int selectedJawabanId) {
-        this.selectedJawabanId = selectedJawabanId;
-    }
-
-    /**
-     * Mendapatkan jawaban yang benar
-     */
-    @Nullable
-    public Jawaban getJawabanBenar() {
-        if (pilihanJawaban != null) {
-            for (Jawaban jawaban : pilihanJawaban) {
-                if (jawaban.isBenar()) {
-                    return jawaban;
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Mendapatkan jawaban yang dipilih oleh user
-     */
-    @Nullable
-    public Jawaban getSelectedJawaban() {
-        if (pilihanJawaban != null && selectedJawabanId != -1) {
-            for (Jawaban jawaban : pilihanJawaban) {
-                if (jawaban.getIdPilihan() == selectedJawabanId) {
-                    return jawaban;
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Check apakah jawaban user benar
-     */
-    public boolean isUserAnswerCorrect() {
-        Jawaban selectedJawaban = getSelectedJawaban();
-        Jawaban benarJawaban = getJawabanBenar();
-        return selectedJawaban != null && benarJawaban != null &&
-                selectedJawaban.getIdPilihan() == benarJawaban.getIdPilihan();
-    }
-
-    /**
-     * Mendapatkan warna untuk tingkat kesulitan
-     */
-    public int getTingkatKesulitanColor() {
-        switch (tingkatKesulitan.toLowerCase()) {
-            case "mudah":
-                return android.graphics.Color.parseColor("#4CAF50"); // Green
-            case "sedang":
-                return android.graphics.Color.parseColor("#FF9800"); // Orange
-            case "sulit":
-                return android.graphics.Color.parseColor("#F44336"); // Red
-            default:
-                return android.graphics.Color.parseColor("#9E9E9E"); // Grey
-        }
-    }
-
-    /**
-     * Mendapatkan nomor soal untuk display
-     */
-    public String getNomorSoal() {
-        if (urutanDalamSesi > 0) {
-            return "Soal " + urutanDalamSesi;
-        }
-        return "Soal ?";
-    }
-
-    /**
-     * Mendapatkan status jawaban
-     */
-    public String getStatusJawaban() {
-        if (!isAnswered) {
-            return "Belum Dijawab";
-        } else if (isUserAnswerCorrect()) {
-            return "Benar ✅";
-        } else {
-            return "Salah ❌";
-        }
-    }
-
-    @Override
-    public String toString() {
-        return "Soal{" +
-                "idSoal=" + idSoal +
-                ", idBab=" + idBab +
-                ", pertanyaan='" + pertanyaan + '\'' +
-                ", tingkatKesulitan='" + tingkatKesulitan + '\'' +
-                ", poin=" + poin +
-                ", urutanDalamSesi=" + urutanDalamSesi +
-                ", isAnswered=" + isAnswered +
-                '}';
     }
 }

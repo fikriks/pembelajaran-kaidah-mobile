@@ -18,15 +18,14 @@ import com.khozin.pembelajarankaidah.R;
 import com.khozin.pembelajarankaidah.adapter.KaidahSmallAdapter;
 import com.khozin.pembelajarankaidah.data.model.MateriKaidah;
 import com.khozin.pembelajarankaidah.data.model.SesiLatihan;
-import com.khozin.pembelajarankaidah.database.AppDatabase;
 import com.khozin.pembelajarankaidah.utils.SessionManager;
-import com.khozin.pembelajarankaidah.database.entity.SesiLatihanStatistics;
 import com.khozin.pembelajarankaidah.data.remote.ApiService;
 import com.khozin.pembelajarankaidah.data.model.ApiResponse;
 import com.khozin.pembelajarankaidah.data.model.ChapterProgressResponse;
 import com.khozin.pembelajarankaidah.network.RetrofitClient;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import retrofit2.Call;
@@ -53,7 +52,6 @@ public class HomeFragment extends Fragment {
 
     // Data
     private SessionManager sessionManager;
-    private AppDatabase database;
     private KaidahSmallAdapter recentKaidahAdapter;
     private ApiService apiService;
 
@@ -113,7 +111,6 @@ public class HomeFragment extends Fragment {
      */
     private void setupDatabase() {
         sessionManager = new SessionManager(requireContext());
-        database = AppDatabase.getDatabase(requireContext());
         apiService = RetrofitClient.getInstance().getApiService();
     }
 
@@ -171,7 +168,7 @@ public class HomeFragment extends Fragment {
         Executors.newSingleThreadExecutor().execute(() -> {
             try {
                 // Get total kaidah
-                totalKaidah = database.materiKaidahDao().getCount();
+                totalKaidah = 0; // TODO: Get from API;
 
                 // Get completed kaidah for current user
                 int siswaId = sessionManager.getUserId();
@@ -183,10 +180,12 @@ public class HomeFragment extends Fragment {
                     totalQuiz = 0;
                 } else {
                     // Count completed materi for current user only
-                    kaidahSelesai = database.riwayatBelajarDao().countBySiswaAndStatus(siswaId, "selesai");
+                    // kaidahSelesai = database.riwayatBelajarDao().countBySiswaAndStatus(siswaId, "selesai"); // REMOVED - API only approach
+                    kaidahSelesai = 0; // TODO: Get from API
 
                     // Get total quiz sessions
-                    totalQuiz = database.sesiLatihanDao().getTotalSesiSelesai(siswaId);
+                    // totalQuiz = database.sesiLatihanDao().getTotalSesiSelesai(siswaId); // REMOVED - API only approach
+                    totalQuiz = 0; // TODO: Get from API
                 }
 
                 // Calculate progress percentage
@@ -205,9 +204,8 @@ public class HomeFragment extends Fragment {
                     siswaId, totalKaidah, kaidahSelesai, totalQuiz, progressPercentage
                 ));
 
-                // Get average score
-                SesiLatihanStatistics stats = database.sesiLatihanDao().getSesiStatistics(siswaId);
-                float averageScore = stats != null ? stats.getRataRataSkor() : 0.0f;
+                // Get average score from API only
+                float averageScore = 0.0f; // Will be loaded from API later
 
                 // Update UI on main thread
                 if (isAdded() && getActivity() != null) {
@@ -231,8 +229,7 @@ public class HomeFragment extends Fragment {
         Executors.newSingleThreadExecutor().execute(() -> {
             try {
                 int siswaId = sessionManager.getUserId();
-                List<MateriKaidah> recentKaidah = database.materiKaidahDao()
-                        .getMateriWithProgressSync(siswaId);
+                List<MateriKaidah> recentKaidah = new ArrayList<>(); // TODO: Get from API
 
                 // Limit to 5 most recent
                 if (recentKaidah.size() > 5) {
@@ -496,7 +493,7 @@ public class HomeFragment extends Fragment {
                     com.google.gson.JsonObject kaidahJson = kaidahProgress.get(i).getAsJsonObject();
                     com.khozin.pembelajarankaidah.data.model.MateriKaidah kaidah = new com.khozin.pembelajarankaidah.data.model.MateriKaidah();
                     kaidah.setIdMateri(kaidahJson.get("id_materi").getAsInt());
-                    kaidah.setJudulKaidah(kaidahJson.get("judul_kaidah").getAsString());
+                    kaidah.setJudulMateri(kaidahJson.get("judul_kaidah").getAsString());
                     kaidah.setDeskripsi(kaidahJson.get("deskripsi").getAsString());
                     kaidah.setProgressPercentage((int) kaidahJson.get("completion_percentage").getAsFloat());
                     recentKaidahList.add(kaidah);
@@ -553,7 +550,7 @@ public class HomeFragment extends Fragment {
                         java.util.Map<String, Object> kaidahMap = (java.util.Map<String, Object>) kaidahProgress.get(i);
                         com.khozin.pembelajarankaidah.data.model.MateriKaidah kaidah = new com.khozin.pembelajarankaidah.data.model.MateriKaidah();
                         kaidah.setIdMateri(safeParseInt(kaidahMap.get("id_materi")));
-                        kaidah.setJudulKaidah((String) kaidahMap.get("judul_kaidah"));
+                        kaidah.setJudulMateri((String) kaidahMap.get("judul_kaidah"));
                         kaidah.setDeskripsi((String) kaidahMap.get("deskripsi"));
 
                         // Handle completion_percentage - could be Double, String, or other Number type

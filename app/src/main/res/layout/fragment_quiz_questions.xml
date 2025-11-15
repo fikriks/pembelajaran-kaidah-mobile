@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="@color/background">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Question Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            app:strokeWidth="2dp"
+            app:strokeColor="@color/primary_green"
+            app:cardBackgroundColor="@android:color/white">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <!-- Question Icon -->
+                <ImageView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/ic_help"
+                    android:background="@drawable/bg_circle_primary_light"
+                    android:padding="12dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginBottom="16dp"
+                    android:contentDescription="Question" />
+
+                <!-- Question Text -->
+                <TextView
+                    android:id="@+id/tvQuestionText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Apa bentuk jamak dari كتابٌ (kitabun) dalam bahasa Arab?"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary"
+                    android:gravity="center"
+                    android:lineSpacingExtra="4dp"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- Question Hint -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Pilih jawaban yang paling tepat di bawah ini"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_secondary"
+                    android:gravity="center"
+                    android:layout_marginTop="8dp" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Jawaban List -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvJawaban"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:nestedScrollingEnabled="false"
+            android:clipToPadding="false"
+            android:paddingBottom="16dp" />
+
+        <!-- Next Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnNext"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Lanjutkan"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:enabled="false"
+            android:textColor="@android:color/white"
+            app:cornerRadius="12dp"
+            app:strokeWidth="2dp"
+            app:strokeColor="@color/primary_green"
+            app:backgroundTint="@color/primary_green"
+            app:rippleColor="@color/primary_green_light"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp" />
+
+    </LinearLayout>
+
+</androidx.core.widget.NestedScrollView>

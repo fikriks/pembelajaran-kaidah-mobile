@@ -25,11 +25,11 @@ import com.khozin.pembelajarankaidah.ui.kaidah.KaidahDetailFragment;
 import com.khozin.pembelajarankaidah.ui.kaidah.BabCongratsFragment;
 import com.khozin.pembelajarankaidah.data.model.Bab;
 import com.khozin.pembelajarankaidah.data.model.MateriKaidah;
-import com.khozin.pembelajarankaidah.database.AppDatabase;
 import com.khozin.pembelajarankaidah.ui.quiz.QuizFragment;
 import com.khozin.pembelajarankaidah.ui.profile.ProfileFragment;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.Executors;
 
 /**
@@ -213,43 +213,48 @@ public class MainActivity extends AppCompatActivity implements BabCongratsFragme
         android.util.Log.d("MainActivity", "Next bab ID: " + nextBab.getIdBab());
         android.util.Log.d("MainActivity", "Next bab Urutan: " + nextBab.getUrutan());
 
-        // Find first materi of the next bab and navigate directly to it
-        Executors.newSingleThreadExecutor().execute(() -> {
-            try {
-                android.util.Log.d("MainActivity", "Starting search for first materi of bab ID: " + nextBab.getIdBab());
-                List<MateriKaidah> allMateri = AppDatabase.getDatabase(this).materiKaidahDao().getAllMateriSync();
-                android.util.Log.d("MainActivity", "Total materi found: " + allMateri.size());
+        // Find first materi of the next bab using API and navigate directly to it
+        String sessionToken = sessionManager.getAuthToken();
+        if (sessionToken == null) {
+            android.util.Log.e("MainActivity", "Session token is null, cannot get materi");
+            return;
+        }
 
-                MateriKaidah firstMateriOfNextBab = null;
+        android.util.Log.d("MainActivity", "Getting first materi of bab ID: " + nextBab.getIdBab() + " via API");
 
-                for (MateriKaidah materi : allMateri) {
-                    android.util.Log.d("MainActivity", "Checking materi: " + materi.getJudulKaidah() + " (bab ID: " + materi.getIdBab() + ")");
-                    if (materi.getIdBab() == nextBab.getIdBab()) {
-                        firstMateriOfNextBab = materi;
-                        android.util.Log.d("MainActivity", "Found first materi: " + materi.getJudulKaidah());
-                        break; // Found the first materi of this bab
+        apiService.getFirstMateriByBab(nextBab.getIdBab(), "Bearer " + sessionToken).enqueue(new Callback<ApiResponse<MateriKaidah>>() {
+            @Override
+            public void onResponse(Call<ApiResponse<MateriKaidah>> call, Response<ApiResponse<MateriKaidah>> response) {
+                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                    MateriKaidah firstMateriOfNextBab = response.body().getData();
+
+                    if (firstMateriOfNextBab != null) {
+                        android.util.Log.d("MainActivity", "Found first materi via API: " + firstMateriOfNextBab.getJudulMateri());
+                        final int materiId = firstMateriOfNextBab.getIdMateri();
+
+                        // Navigate to detail fragment on main thread
+                        runOnUiThread(() -> {
+                            navigateToKaidahDetail(materiId);
+                        });
+                    } else {
+                        android.util.Log.w("MainActivity", "No materi found for bab: " + nextBab.getNamaBab());
+                        // Fallback to bab list if no materi found
+                        runOnUiThread(() -> {
+                            navigateToBabList();
+                        });
                     }
-                }
-
-                final MateriKaidah finalMateriOfNextBab = firstMateriOfNextBab; // Make effectively final
-
-                if (finalMateriOfNextBab != null) {
-                    android.util.Log.d("MainActivity", "Found first materi: " + finalMateriOfNextBab.getJudulKaidah());
-                    final int materiId = finalMateriOfNextBab.getIdMateri(); // Capture ID before lambda
-
-                    // Navigate to detail fragment on main thread
-                    runOnUiThread(() -> {
-                        navigateToKaidahDetail(materiId);
-                    });
                 } else {
-                    android.util.Log.w("MainActivity", "No materi found for bab: " + nextBab.getNamaBab());
-                    // Fallback to bab list if no materi found
+                    android.util.Log.w("MainActivity", "API response unsuccessful or null");
+                    // Fallback to bab list on error
                     runOnUiThread(() -> {
                         navigateToBabList();
                     });
                 }
-            } catch (Exception e) {
-                android.util.Log.e("MainActivity", "Error finding first materi of next bab", e);
+            }
+
+            @Override
+            public void onFailure(Call<ApiResponse<MateriKaidah>> call, Throwable t) {
+                android.util.Log.e("MainActivity", "API error getting first materi of next bab", t);
                 // Fallback to bab list on error
                 runOnUiThread(() -> {
                     navigateToBabList();
@@ -348,7 +353,7 @@ public class MainActivity extends AppCompatActivity implements BabCongratsFragme
                     public void onResponse(Call<ApiResponse<MateriKaidah>> call, Response<ApiResponse<MateriKaidah>> response) {
                         if (response.isSuccessful() && response.body() != null && response.body().getData() != null) {
                             MateriKaidah firstMateri = response.body().getData();
-                            android.util.Log.d("MainActivity", "✓ Found first materi from API: " + firstMateri.getJudulKaidah() + " (ID: " + firstMateri.getIdMateri() + ", urutan: " + firstMateri.getUrutan() + ")");
+                            android.util.Log.d("MainActivity", "✓ Found first materi from API: " + firstMateri.getJudulMateri() + " (ID: " + firstMateri.getIdMateri() + ", urutan: " + firstMateri.getUrutan() + ")");
 
                             // Navigate to detail fragment on main thread
                             runOnUiThread(() -> {

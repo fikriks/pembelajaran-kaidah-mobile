@@ -11,11 +11,11 @@ import com.khozin.pembelajarankaidah.data.model.Bab;
 import com.khozin.pembelajarankaidah.data.model.BabListResponse;
 import com.khozin.pembelajarankaidah.data.model.ChapterProgressResponse;
 import com.khozin.pembelajarankaidah.data.remote.ApiService;
-import com.khozin.pembelajarankaidah.database.AppDatabase;
-import com.khozin.pembelajarankaidah.database.dao.BabDao;
 import com.khozin.pembelajarankaidah.utils.SessionManager;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.ArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -29,7 +29,6 @@ import retrofit2.Response;
  */
 public class BabViewModel extends AndroidViewModel {
 
-    private final BabDao babDao;
     private ApiService apiService;
     private final SessionManager sessionManager;
     private final Executor executor;
@@ -43,28 +42,14 @@ public class BabViewModel extends AndroidViewModel {
     private final MutableLiveData<String> errorLiveData = new MutableLiveData<>();
     private final MutableLiveData<String> successLiveData = new MutableLiveData<>();
 
-    // Local database LiveData
-    private final LiveData<List<Bab>> allBabsLiveData;
-    private final LiveData<List<Bab>> activeBabsLiveData;
-
     public BabViewModel(Application application) {
         super(application);
-
-        AppDatabase database = AppDatabase.getDatabase(application);
-        babDao = database.babDao();
 
         // API service would be injected via dependency injection in real app
         apiService = null; // Will be set via setter
 
         sessionManager = new SessionManager(application);
         executor = Executors.newSingleThreadExecutor();
-
-        // Initialize local LiveData
-        allBabsLiveData = babDao.getAllBabs();
-        activeBabsLiveData = babDao.getActiveBabs();
-
-        // Load initial data
-        loadChaptersFromLocal();
     }
 
     /**
@@ -75,23 +60,16 @@ public class BabViewModel extends AndroidViewModel {
     }
 
     /**
-     * Load chapters from local database
+     * Load chapters from cache (API-only approach)
      */
-    public void loadChaptersFromLocal() {
-        executor.execute(() -> {
-            try {
-                List<Bab> chapters = babDao.getActiveBabsSync();
-                chaptersLiveData.postValue(chapters);
-
-                // Get unlocked chapters
-                List<Bab> unlockedChapters = babDao.getBabsWithProgress().getValue();
-                if (unlockedChapters != null) {
-                    unlockedChaptersLiveData.postValue(unlockedChapters);
-                }
-            } catch (Exception e) {
-                errorLiveData.postValue("Error loading chapters: " + e.getMessage());
-            }
-        });
+    public void loadChaptersFromCache() {
+        // Chapters are loaded from API and cached in repository
+        // This method can be used to trigger repository data loading
+        if (apiService != null) {
+            loadChaptersFromApi();
+        } else {
+            errorLiveData.setValue("API service not available");
+        }
     }
 
     /**
@@ -105,7 +83,8 @@ public class BabViewModel extends AndroidViewModel {
 
         loadingLiveData.setValue(true);
 
-        apiService.getChapters().enqueue(new Callback<BabListResponse>() {
+        String authToken = sessionManager.getAuthToken();
+        apiService.getChapters("Bearer " + authToken).enqueue(new Callback<BabListResponse>() {
             @Override
             public void onResponse(Call<BabListResponse> call, Response<BabListResponse> response) {
                 loadingLiveData.setValue(false);
@@ -113,11 +92,8 @@ public class BabViewModel extends AndroidViewModel {
                 if (response.isSuccessful() && response.body() != null) {
                     BabListResponse babResponse = response.body();
                     if (babResponse.isSuccess()) {
-                        List<Bab> chapters = babResponse.getData();
+                        List<Bab> chapters = babResponse.getData().getChapters();
                         chaptersLiveData.setValue(chapters);
-
-                        // Save to local database
-                        saveChaptersToLocal(chapters);
 
                         successLiveData.setValue("Chapters loaded successfully");
                     } else {
@@ -148,7 +124,8 @@ public class BabViewModel extends AndroidViewModel {
 
         loadingLiveData.setValue(true);
 
-        apiService.getProgressOverview().enqueue(new Callback<ChapterProgressResponse>() {
+        String authToken = sessionManager.getAuthToken();
+        apiService.getProgressOverview("Bearer " + authToken).enqueue(new Callback<ChapterProgressResponse>() {
             @Override
             public void onResponse(Call<ChapterProgressResponse> call, Response<ChapterProgressResponse> response) {
                 loadingLiveData.setValue(false);
@@ -157,9 +134,6 @@ public class BabViewModel extends AndroidViewModel {
                     ChapterProgressResponse progressResponse = response.body();
                     if (progressResponse.isSuccess()) {
                         progressOverviewLiveData.setValue(progressResponse);
-
-                        // Update local database with progress info
-                        updateLocalProgress(progressResponse);
 
                         successLiveData.setValue("Progress overview loaded successfully");
                     } else {
@@ -180,150 +154,42 @@ public class BabViewModel extends AndroidViewModel {
     }
 
     /**
-     * Save chapters to local database
-     */
-    private void saveChaptersToLocal(List<Bab> chapters) {
-        executor.execute(() -> {
-            try {
-                // Clear existing chapters
-                babDao.deleteAllBabs();
-
-                // Insert new chapters
-                babDao.insertAll(chapters);
-
-            } catch (Exception e) {
-                errorLiveData.postValue("Error saving chapters: " + e.getMessage());
-            }
-        });
-    }
-
-    /**
-     * Update local progress information
-     */
-    private void updateLocalProgress(ChapterProgressResponse progressResponse) {
-        executor.execute(() -> {
-            try {
-                if (progressResponse.getData() != null &&
-                    progressResponse.getData().getChapters() != null) {
-
-                    for (Bab chapter : progressResponse.getData().getChapters()) {
-                        babDao.updateProgressInfo(
-                                chapter.getIdBab(),
-                                chapter.getTotalMateri(),
-                                chapter.getCompletedMateri(),
-                                chapter.getInProgressMateri(),
-                                chapter.getNotStartedMateri(),
-                                chapter.getProgressPercentage(),
-                                chapter.getStatusColor(),
-                                chapter.getNextAction()
-                        );
-
-                        babDao.updateUnlockStatus(chapter.getIdBab(), chapter.isUnlocked());
-                    }
-                }
-            } catch (Exception e) {
-                errorLiveData.postValue("Error updating progress: " + e.getMessage());
-            }
-        });
-    }
-
-    /**
-     * Get chapter by ID
+     * Get chapter by ID from LiveData
      */
     public void getChapterById(int chapterId) {
-        executor.execute(() -> {
-            try {
-                Bab chapter = babDao.getBabById(chapterId);
-                if (chapter != null) {
-                    currentChapterLiveData.postValue(chapter);
-                } else {
-                    errorLiveData.postValue("Chapter not found");
+        List<Bab> chapters = chaptersLiveData.getValue();
+        if (chapters != null) {
+            for (Bab chapter : chapters) {
+                if (chapter.getIdBab() == chapterId) {
+                    currentChapterLiveData.setValue(chapter);
+                    return;
                 }
-            } catch (Exception e) {
-                errorLiveData.postValue("Error getting chapter: " + e.getMessage());
             }
-        });
+        }
+        errorLiveData.setValue("Chapter not found");
     }
 
     /**
-     * Unlock next chapter based on progress
-     */
-    public void unlockNextChapter() {
-        executor.execute(() -> {
-            try {
-                // Find the next chapter to unlock
-                List<Bab> chapters = babDao.getActiveBabsSync();
-                Bab nextChapterToUnlock = null;
-
-                for (int i = 0; i < chapters.size() - 1; i++) {
-                    Bab currentChapter = chapters.get(i);
-                    Bab nextChapter = chapters.get(i + 1);
-
-                    // If current chapter is completed and next chapter is locked
-                    if (currentChapter.getProgressPercentage() >= 100 &&
-                        !nextChapter.isUnlocked()) {
-                        nextChapterToUnlock = nextChapter;
-                        break;
-                    }
-                }
-
-                if (nextChapterToUnlock != null) {
-                    babDao.updateUnlockStatus(nextChapterToUnlock.getIdBab(), true);
-                    successLiveData.postValue("Chapter " + nextChapterToUnlock.getNamaBab() + " unlocked!");
-
-                    // Reload chapters
-                    loadChaptersFromLocal();
-                } else {
-                    errorLiveData.postValue("No chapters to unlock");
-                }
-            } catch (Exception e) {
-                errorLiveData.postValue("Error unlocking chapter: " + e.getMessage());
-            }
-        });
-    }
-
-    /**
-     * Update chapter progress
-     */
-    public void updateChapterProgress(int chapterId, int totalMateri, int completedMateri) {
-        executor.execute(() -> {
-            try {
-                int inProgressMateri = totalMateri - completedMateri;
-                int notStartedMateri = 0; // Calculate based on logic
-                int progressPercentage = totalMateri > 0 ?
-                        (int) ((completedMateri / (double) totalMateri) * 100) : 0;
-
-                String statusColor = progressPercentage >= 100 ? "success" :
-                                  progressPercentage > 0 ? "warning" : "secondary";
-                String nextAction = progressPercentage >= 100 ? "review" :
-                                 progressPercentage > 0 ? "continue" : "start";
-
-                babDao.updateProgressInfo(
-                        chapterId, totalMateri, completedMateri, inProgressMateri,
-                        notStartedMateri, progressPercentage, statusColor, nextAction
-                );
-
-                // Check if next chapter should be unlocked
-                unlockNextChapter();
-
-            } catch (Exception e) {
-                errorLiveData.postValue("Error updating progress: " + e.getMessage());
-            }
-        });
-    }
-
-    /**
-     * Search chapters by name
+     * Search chapters by name in current LiveData
      */
     public void searchChapters(String query) {
-        executor.execute(() -> {
-            try {
-                List<Bab> results = babDao.searchBabsSync(query);
-                chaptersLiveData.postValue(results);
-            } catch (Exception e) {
-                errorLiveData.postValue("Error searching chapters: " + e.getMessage());
+        List<Bab> currentChapters = chaptersLiveData.getValue();
+        if (currentChapters == null || query == null || query.trim().isEmpty()) {
+            chaptersLiveData.setValue(currentChapters);
+            return;
+        }
+
+        List<Bab> results = new ArrayList<>();
+        String searchQuery = query.toLowerCase().trim();
+
+        for (Bab chapter : currentChapters) {
+            if (chapter.getNamaBab() != null &&
+                chapter.getNamaBab().toLowerCase().contains(searchQuery)) {
+                results.add(chapter);
             }
-        });
+        }
+
+        chaptersLiveData.setValue(results);
     }
 
     /**
@@ -361,14 +227,6 @@ public class BabViewModel extends AndroidViewModel {
 
     public LiveData<String> getSuccessLiveData() {
         return successLiveData;
-    }
-
-    public LiveData<List<Bab>> getAllBabsLiveData() {
-        return allBabsLiveData;
-    }
-
-    public LiveData<List<Bab>> getActiveBabsLiveData() {
-        return activeBabsLiveData;
     }
 
     /**

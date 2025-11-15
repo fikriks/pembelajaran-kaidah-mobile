@@ -1,101 +1,65 @@
 package com.khozin.pembelajarankaidah.data.model;
 
-import androidx.room.Entity;
-import androidx.room.PrimaryKey;
-import androidx.room.ColumnInfo;
-import androidx.room.ForeignKey;
-import androidx.room.Ignore;
-import androidx.room.Index;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.google.gson.annotations.SerializedName;
+import java.io.Serializable;
 
 /**
  * Entity SesiLatihan untuk tabel sesi_latihan
  * Sesuai database schema di CLAUDE.md
  * Penting untuk LCM algorithm tracking
  */
-@Entity(tableName = "sesi_latihan",
-        indices = {
-            @Index(value = {"id_siswa"}),
-            @Index(value = {"id_materi"}),
-            @Index(value = {"id_siswa", "id_materi"}),
-            @Index(value = {"status"})
-        },
-        foreignKeys = {
-            @ForeignKey(entity = Siswa.class,
-                    parentColumns = "id",
-                    childColumns = "id_siswa",
-                    onDelete = ForeignKey.CASCADE),
-            @ForeignKey(entity = MateriKaidah.class,
-                    parentColumns = "id_materi",
-                    childColumns = "id_materi",
-                    onDelete = ForeignKey.CASCADE)
-        })
-public class SesiLatihan {
+public class SesiLatihan implements Serializable {
 
-    @PrimaryKey(autoGenerate = true)
-    @ColumnInfo(name = "id_sesi")
+    @SerializedName("id_sesi")
     private int idSesi;
 
-    @ColumnInfo(name = "id_siswa")
     private int idSiswa;
 
-    @ColumnInfo(name = "id_materi")
     private int idBab;
 
     @SerializedName("seed_digunakan")
-    @ColumnInfo(name = "seed_digunakan")
     private long seedDigunakan;
 
-    @ColumnInfo(name = "total_soal")
+    @SerializedName("total_soal")
     private int totalSoal;
 
-    @ColumnInfo(name = "soal_benar")
+    @SerializedName("soal_benar")
     private int soalBenar;
 
-    @ColumnInfo(name = "skor")
+    @SerializedName("skor_akhir")
     private float skor;
 
     @SerializedName("waktu_mulai")
-    @ColumnInfo(name = "waktu_mulai")
     private String waktuMulai;
 
     @SerializedName("waktu_selesai")
     @Nullable
-    @ColumnInfo(name = "waktu_selesai")
     private String waktuSelesai;
 
-    @ColumnInfo(name = "durasi_detik")
+    @SerializedName("durasi_detik")
     @Nullable
     private Integer durasiDetik;
 
     @SerializedName("status")
     @NonNull
-    @ColumnInfo(name = "status")
     private String status; // sedang_berjalan, selesai
 
     @SerializedName("waktu_dibuat")
-    @ColumnInfo(name = "waktu_dibuat")
     private String waktuDibuat;
 
     // Additional fields untuk mobile app
-    @ColumnInfo(name = "bab_judul")
     private String babJudul;
 
-    @ColumnInfo(name = "siswa_nama")
     private String siswaNama;
 
-    @ColumnInfo(name = "current_question_index")
     private int currentQuestionIndex = 0;
 
-    @ColumnInfo(name = "jumlah_soal_dijawab")
     private int jumlahSoalDijawab = 0;
 
-    @ColumnInfo(name = "is_paused")
     private boolean isPaused = false;
 
-    @ColumnInfo(name = "last_pause_time")
     private long lastPauseTime = 0;
 
     // LCM Algorithm Parameters (sesuai skripsi)
@@ -113,7 +77,6 @@ public class SesiLatihan {
     }
 
     // Constructor untuk membuat sesi baru
-    @Ignore
     public SesiLatihan(int idSiswa, int idBab, int totalSoal, long seed) {
         this();
         this.idSiswa = idSiswa;

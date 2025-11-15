@@ -16,13 +16,14 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.core.content.ContextCompat;
 
 import com.khozin.pembelajarankaidah.R;
-import com.khozin.pembelajarankaidah.data.model.RiwayatBelajar;
-import com.khozin.pembelajarankaidah.data.model.MateriKaidah;
 import com.khozin.pembelajarankaidah.data.model.Bab;
-import com.khozin.pembelajarankaidah.database.AppDatabase;
+import com.khozin.pembelajarankaidah.data.model.BabListResponse;
+import com.khozin.pembelajarankaidah.data.model.ApiResponse;
 import com.khozin.pembelajarankaidah.utils.SessionManager;
+import com.khozin.pembelajarankaidah.network.RetrofitClient;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.Executors;
 
 /**
@@ -38,7 +39,6 @@ public class QuizFragment extends Fragment {
     private Button btnRefresh;
 
     private SessionManager sessionManager;
-    private AppDatabase database;
     private View rootView;
     private QuizAdapter quizAdapter;
     private List<Bab> babList;
@@ -57,7 +57,6 @@ public class QuizFragment extends Fragment {
 
     private void initViews() {
         sessionManager = new SessionManager(requireContext());
-        database = AppDatabase.getDatabase(requireContext());
 
         // Initialize views
         tvTitle = rootView.findViewById(R.id.tv_quiz_title);
@@ -103,106 +102,105 @@ public class QuizFragment extends Fragment {
     private void checkPrerequisites() {
         // Show loading state
         progressBar.setVisibility(View.VISIBLE);
-        tvStatusMessage.setText("Memeriksa prerequisite...");
+        tvStatusMessage.setText("Mengambil data dari server...");
         llQuizContainer.setVisibility(View.GONE);
         llPrerequisiteContainer.setVisibility(View.GONE);
         btnRefresh.setVisibility(View.GONE);
 
-        // Run database check in background thread
-        Executors.newSingleThreadExecutor().execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    int currentUserId = sessionManager.getUserId();
+        // Get chapters from API
+        String authToken = sessionManager.getAuthToken();
 
-                    // Get all bab data from database
-                    List<Bab> babList = database.babDao().getAllBabsSync();
+        // First get progress data from riwayat_belajar to determine unlock status
+        RetrofitClient.getInstance()
+                .getApiService()
+                .getProgress(authToken)
+                .enqueue(new retrofit2.Callback<ApiResponse<java.util.Map<String, Object>>>() {
+                    @Override
+                    public void onResponse(retrofit2.Call<ApiResponse<java.util.Map<String, Object>>> call,
+                                           retrofit2.Response<ApiResponse<java.util.Map<String, Object>>> progressResponse) {
 
-                    // For each bab, calculate if it's available for quiz (progress >= 100%)
-                    for (Bab bab : babList) {
-                        // Check if all kaidah in this bab are completed
-                        boolean babQuizAvailable = isQuizAvailableForBab(bab.getIdBab(), currentUserId);
-                        bab.setUnlocked(babQuizAvailable);
+                        // Then get chapters list
+                        RetrofitClient.getInstance()
+                                .getApiService()
+                                .getChapters(authToken)
+                                .enqueue(new retrofit2.Callback<BabListResponse>() {
+                                    @Override
+                                    public void onResponse(retrofit2.Call<BabListResponse> call,
+                                                           retrofit2.Response<BabListResponse> response) {
+                                        progressBar.setVisibility(View.GONE);
+
+                                        if (response.isSuccessful() && response.body() != null) {
+                                            BabListResponse.ChapterData chapterData = response.body().getData();
+                                            List<Bab> babList = chapterData != null ? chapterData.getChapters() : new java.util.ArrayList<>();
+
+                                            // Set unlock status based on riwayat_belajar progress API data
+                                            if (progressResponse.isSuccessful() && progressResponse.body() != null) {
+                                                ApiResponse<java.util.Map<String, Object>> progressApi = progressResponse.body();
+                                                if (progressApi != null && progressApi.getData() != null) {
+                                                    java.util.Map<String, Object> progressData = progressApi.getData();
+                                                    java.util.List<java.util.Map<String, Object>> kaidahProgress =
+                                                        (java.util.List<java.util.Map<String, Object>>) progressData.get("kaidah_progress");
+
+                                                    if (kaidahProgress != null) {
+                                                        for (Bab bab : babList) {
+                                                            // Find progress for this bab from riwayat_belajar
+                                                            boolean isCompleted = false;
+                                                            for (java.util.Map<String, Object> kaidah : kaidahProgress) {
+                                                                String idMateri = String.valueOf(kaidah.get("id_materi"));
+                                                                String status = (String) kaidah.get("status");
+                                                                if (String.valueOf(bab.getIdBab()).equals(idMateri) &&
+                                                                    "selesai".equals(status)) {
+                                                                    isCompleted = true;
+                                                                    break;
+                                                                }
+                                                            }
+                                                            bab.setUnlocked(isCompleted);
+                                                        }
+                                                    }
+                                                }
+                                            } else {
+                                                // If progress API fails, lock all quizzes
+                                                for (Bab bab : babList) {
+                                                    bab.setUnlocked(false);
+                                                }
+                                            }
+
+                                            if (babList.isEmpty()) {
+                                                showErrorState("Tidak ada data bab tersedia. Silakan sinkronkan data terlebih dahulu.");
+                                            } else {
+                                                showDynamicQuizOptions(babList, babList.size(), babList.size());
+                                            }
+                                        } else {
+                                            showErrorState("Gagal mengambil data dari server. Kode: " + response.code());
+                                        }
+                                    }
+
+                                    @Override
+                                    public void onFailure(retrofit2.Call<BabListResponse> call,
+                                                          Throwable t) {
+                                        progressBar.setVisibility(View.GONE);
+                                        showErrorState("Tidak dapat terhubung ke server: " + t.getMessage());
+                                    }
+                                });
                     }
 
-                    // Count available quizzes
-                    int availableQuizzes = 0;
-                    int totalQuizzes = babList.size();
-                    for (Bab bab : babList) {
-                        if (bab.isUnlocked()) {
-                            availableQuizzes++;
-                        }
+                    @Override
+                    public void onFailure(retrofit2.Call<ApiResponse<java.util.Map<String, Object>>> call,
+                                          Throwable t) {
+                        progressBar.setVisibility(View.GONE);
+                        showErrorState("Tidak dapat mengambil data progress: " + t.getMessage());
                     }
-
-                    final int finalAvailableQuizzes = availableQuizzes;
-                    final int finalTotalQuizzes = totalQuizzes;
-                    final List<Bab> finalBabList = babList;
-
-                    // Update UI on main thread
-                    requireActivity().runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            progressBar.setVisibility(View.GONE);
-
-                            if (finalBabList.isEmpty()) {
-                                // No bab available
-                                showErrorState("Tidak ada data bab tersedia. Silakan sinkronkan data terlebih dahulu.");
-                            } else if (finalAvailableQuizzes > 0) {
-                                // Some quizzes available - show dynamic quiz options
-                                showDynamicQuizOptions(finalBabList, finalAvailableQuizzes, finalTotalQuizzes);
-                            } else {
-                                // No quizzes available - show prerequisite message
-                                showPrerequisiteMessage(finalTotalQuizzes);
-                            }
-                        }
-                    });
-
-                } catch (Exception e) {
-                    requireActivity().runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            progressBar.setVisibility(View.GONE);
-                            showErrorState("Terjadi kesalahan saat memeriksa data: " + e.getMessage());
-                        }
-                    });
-                }
-            }
-        });
+                });
     }
 
-    /**
-     * Check if quiz is available for specific bab
-     */
-    private boolean isQuizAvailableForBab(int babId, int userId) {
-        try {
-            // Get all materi for this bab
-            List<MateriKaidah> materiList = database.materiKaidahDao().getMateriByBabSync(babId);
-
-            if (materiList.isEmpty()) {
-                return false;
-            }
-
-            // Get completed materi for this bab
-            int completedCount = 0;
-            for (MateriKaidah materi : materiList) {
-                RiwayatBelajar riwayat = database.riwayatBelajarDao()
-                    .getBySiswaAndMateriSync(userId, materi.getIdMateri());
-
-                if (riwayat != null && "selesai".equals(riwayat.getStatus())) {
-                    completedCount++;
-                }
-            }
-
-            // Quiz available if all materi in bab are completed
-            return completedCount >= materiList.size();
-
-        } catch (Exception e) {
-            android.util.Log.e("QuizFragment", "Error checking quiz availability for bab " + babId, e);
-            return false;
-        }
-    }
-
+  
     private void showDynamicQuizOptions(List<Bab> babData, int availableQuizzes, int totalQuizzes) {
+        // Check if fragment is still attached to context
+        if (!isAdded() || getContext() == null) {
+            android.util.Log.w("QuizFragment", "Fragment not attached to context, skipping UI update");
+            return;
+        }
+
         tvTitle.setText("Quiz Siap Dimulai!");
         tvSubtitle.setText("Quiz tersedia: " + availableQuizzes + " dari " + totalQuizzes + " bab");
         tvStatusMessage.setText("Klik quiz untuk memulai latihan");
@@ -219,6 +217,12 @@ public class QuizFragment extends Fragment {
     }
 
     private void showPrerequisiteMessage(int totalQuizzes) {
+        // Check if fragment is still attached to context
+        if (!isAdded() || getContext() == null) {
+            android.util.Log.w("QuizFragment", "Fragment not attached to context, skipping UI update");
+            return;
+        }
+
         tvTitle.setText("Quiz Terkunci");
         tvSubtitle.setText("Anda perlu menyelesaikan semua materi di setiap bab untuk membuka quiz.");
 
@@ -242,6 +246,12 @@ public class QuizFragment extends Fragment {
     }
 
     private void showErrorState(String errorMessage) {
+        // Check if fragment is still attached to context
+        if (!isAdded() || getContext() == null) {
+            android.util.Log.w("QuizFragment", "Fragment not attached to context, skipping error UI update");
+            return;
+        }
+
         tvTitle.setText("Error");
         tvSubtitle.setText("Terjadi kesalahan saat memuat data quiz");
         tvStatusMessage.setText(errorMessage);
@@ -257,19 +267,55 @@ public class QuizFragment extends Fragment {
         android.util.Log.d("QuizFragment", "Bab ID: " + bab.getIdBab());
         android.util.Log.d("QuizFragment", "Bab Urutan: " + bab.getUrutan());
 
+        // Prevent multiple rapid clicks
+        if (rvQuizList != null) {
+            rvQuizList.setEnabled(false);
+        }
+
         // Navigate to QuizActivity with selected bab data
         try {
-            android.content.Intent intent = new android.content.Intent(requireContext(),
-                com.khozin.pembelajarankaidah.ui.quiz.QuizActivity.class);
-            intent.putExtra("bab_id", bab.getIdBab());
-            intent.putExtra("bab_name", bab.getNamaBab());
-            intent.putExtra("bab_urutan", bab.getUrutan());
-            startActivity(intent);
+            // Add small delay to prevent rapid transition issues
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                try {
+                    android.content.Intent intent = new android.content.Intent(requireContext(),
+                        com.khozin.pembelajarankaidah.ui.quiz.QuizActivity.class);
+                    intent.putExtra("bab_id", bab.getIdBab());
+                    intent.putExtra("bab_name", bab.getNamaBab());
+                    intent.putExtra("bab_urutan", bab.getUrutan());
+                    intent.putExtra("total_questions", 10);
+                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    startActivity(intent);
+
+                    // Add smooth transition animation
+                    if (getActivity() != null) {
+                        getActivity().overridePendingTransition(
+                            R.anim.slide_in_right, R.anim.slide_out_left);
+                    }
+                } catch (Exception e) {
+                    android.util.Log.e("QuizFragment", "Error starting quiz in handler: " + e.getMessage(), e);
+                    if (getContext() != null) {
+                        android.widget.Toast.makeText(getContext(),
+                            "Gagal memulai quiz: " + e.getMessage(),
+                            android.widget.Toast.LENGTH_SHORT).show();
+                    }
+                    // Re-enable view if start fails
+                    if (rvQuizList != null) {
+                        rvQuizList.setEnabled(true);
+                    }
+                }
+            }, 200); // 200ms delay for smoother transition
+
         } catch (Exception e) {
             android.util.Log.e("QuizFragment", "Error starting quiz: " + e.getMessage(), e);
-            android.widget.Toast.makeText(requireContext(),
-                "Gagal memulai quiz: " + e.getMessage(),
-                android.widget.Toast.LENGTH_SHORT).show();
+            if (requireContext() != null) {
+                android.widget.Toast.makeText(requireContext(),
+                    "Gagal memulai quiz: " + e.getMessage(),
+                    android.widget.Toast.LENGTH_SHORT).show();
+            }
+            // Re-enable view if handler setup fails
+            if (rvQuizList != null) {
+                rvQuizList.setEnabled(true);
+            }
         }
     }
 

@@ -1,9 +1,5 @@
 package com.khozin.pembelajarankaidah.data.model;
 
-import androidx.room.Entity;
-import androidx.room.PrimaryKey;
-import androidx.room.ColumnInfo;
-import androidx.room.Ignore;
 import androidx.annotation.NonNull;
 import com.google.gson.annotations.SerializedName;
 
@@ -11,56 +7,44 @@ import com.google.gson.annotations.SerializedName;
  * Entity Siswa untuk tabel siswa
  * Sesuai database schema di CLAUDE.md
  */
-@Entity(tableName = "siswa")
 public class Siswa {
 
-    @PrimaryKey(autoGenerate = true)
-    @ColumnInfo(name = "id")
     private int id;
 
     @SerializedName("nis")
     @NonNull
-    @ColumnInfo(name = "nis")
     private String nis;
 
     @SerializedName("nama_lengkap")
     @NonNull
-    @ColumnInfo(name = "nama_lengkap")
     private String namaLengkap;
 
     @SerializedName("kata_sandi")
     @NonNull
-    @ColumnInfo(name = "kata_sandi")
     private String kataSandi;
 
     @SerializedName("jenis_kelamin")
     @NonNull
-    @ColumnInfo(name = "jenis_kelamin")
     private String jenisKelamin; // L atau P
 
     @SerializedName("kelas")
     @NonNull
-    @ColumnInfo(name = "kelas")
     private String kelas;
 
     @SerializedName("status")
     @NonNull
-    @ColumnInfo(name = "status")
     private String status; // AKTIF atau NONAKTIF
 
     @SerializedName("waktu_dibuat")
-    @ColumnInfo(name = "waktu_dibuat")
     private String waktuDibuat;
 
     @SerializedName("waktu_diubah")
-    @ColumnInfo(name = "waktu_diubah")
     private String waktuDiubah;
 
     // Default constructor
     public Siswa() {}
 
     // Constructor untuk login
-    @Ignore
     public Siswa(String nis, String namaLengkap, String kataSandi) {
         this.nis = nis;
         this.namaLengkap = namaLengkap;

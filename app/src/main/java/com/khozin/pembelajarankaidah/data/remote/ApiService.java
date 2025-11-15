@@ -6,6 +6,8 @@ import com.khozin.pembelajarankaidah.data.model.Siswa;
 import com.khozin.pembelajarankaidah.data.model.Bab;
 import com.khozin.pembelajarankaidah.data.model.MateriKaidah;
 import com.khozin.pembelajarankaidah.data.model.SesiLatihan;
+import com.khozin.pembelajarankaidah.data.model.StartSesiResponse;
+import com.khozin.pembelajarankaidah.data.model.FinishSesiResponse;
 import com.khozin.pembelajarankaidah.data.model.RiwayatBelajar;
 import com.khozin.pembelajarankaidah.data.model.KaidahListResponse;
 import com.khozin.pembelajarankaidah.data.model.KaidahGroupedResponse;
@@ -14,6 +16,7 @@ import com.khozin.pembelajarankaidah.data.model.ChapterProgressResponse;
 import com.khozin.pembelajarankaidah.network.ApiConstants;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 
 import retrofit2.Call;
@@ -107,7 +110,7 @@ public interface ApiService {
     // ===================
 
     @POST(ApiConstants.SESI_START)
-    Call<ApiResponse<SesiLatihan>> startSesi(
+    Call<ApiResponse<StartSesiResponse>> startSesi(
             @Body Map<String, Object> sesiRequest
     );
 
@@ -126,7 +129,10 @@ public interface ApiService {
     );
 
     @POST(ApiConstants.SESI_FINISH)
-    Call<ApiResponse<SesiLatihan>> finishSesi(
+    Call<ApiResponse<FinishSesiResponse>> finishActiveSession();
+
+    @POST(ApiConstants.SESI_FINISH_WITH_ID)
+    Call<ApiResponse<FinishSesiResponse>> finishSesi(
             @Path("id") int sesiId
     );
 
@@ -164,7 +170,7 @@ public interface ApiService {
      * Get random soal untuk bab tertentu
      * Menggunakan LCM algorithm untuk pengacakan
      */
-    @POST("api/soal/random")
+    @POST("soal/random")
     Call<ApiResponse<Map<String, Object>>> getRandomSoal(
             @Body Map<String, Object> soalRequest
     );

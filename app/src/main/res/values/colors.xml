@@ -67,4 +67,9 @@
     <color name="overlay_dark">#80000000</color>
     <color name="overlay_light">#40000000</color>
     <color name="shimmer">#E0E0E0</color>
+
+    <!-- Additional Colors for Quiz -->
+    <color name="primary_500">#4CAF50</color>
+    <color name="background">#FAFAFA</color>
+    <color name="secondary_button">#DCEDC8</color>
 </resources>

@@ -1,9 +1,5 @@
 package com.khozin.pembelajarankaidah.data.model;
 
-import androidx.room.Entity;
-import androidx.room.PrimaryKey;
-import androidx.room.ColumnInfo;
-import androidx.room.Ignore;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.google.gson.annotations.SerializedName;
@@ -12,77 +8,62 @@ import com.google.gson.annotations.SerializedName;
  * Entity Bab untuk tabel bab
  * Sesuai database schema di CLAUDE.md
  */
-@Entity(tableName = "bab")
 public class Bab implements java.io.Serializable {
 
-    @PrimaryKey(autoGenerate = true)
-    @ColumnInfo(name = "id_bab")
+    @SerializedName("id_bab")
     private int idBab;
 
     @SerializedName("nama_bab")
     @NonNull
-    @ColumnInfo(name = "nama_bab")
     private String namaBab;
 
     @SerializedName("deskripsi")
     @Nullable
-    @ColumnInfo(name = "deskripsi")
     private String deskripsi;
 
-    @ColumnInfo(name = "urutan")
     private int urutan;
 
     @SerializedName("is_active")
-    @ColumnInfo(name = "is_active")
     private boolean isActive = true;
 
-    @SerializedName("waktu_dibuat")
-    @ColumnInfo(name = "waktu_dibuat")
+    @SerializedName("created_at")
     private String waktuDibuat;
 
-    @SerializedName("waktu_diubah")
-    @ColumnInfo(name = "waktu_diubah")
+    @SerializedName("updated_at")
     private String waktuDiubah;
 
     // Additional fields untuk mobile app - Chapter Progress
-    @ColumnInfo(name = "total_materi")
+    @SerializedName("total_materi")
     private int totalMateri = 0;
 
-    @ColumnInfo(name = "completed_materi")
+    @SerializedName("completed_materi")
     private int completedMateri = 0;
 
-    @ColumnInfo(name = "in_progress_materi")
     private int inProgressMateri = 0;
 
-    @ColumnInfo(name = "not_started_materi")
     private int notStartedMateri = 0;
 
-    @ColumnInfo(name = "progress_percentage")
+    @SerializedName("progress_percentage")
     private int progressPercentage = 0;
 
-    @ColumnInfo(name = "is_unlocked")
     private boolean isUnlocked = false;
 
-    @ColumnInfo(name = "status_color")
+    @SerializedName("status_color")
     private String statusColor = "secondary";
 
-    @ColumnInfo(name = "next_action")
+    @SerializedName("next_action")
     private String nextAction = "start";
 
     @SerializedName("chapter_code")
     @Nullable
-    @ColumnInfo(name = "chapter_code")
     private String chapterCode;
 
     // Computed fields for getBabsWithProgress()
-    @ColumnInfo(name = "computed_status_color")
     private String computedStatusColor;
 
-    @ColumnInfo(name = "computed_next_action")
     private String computedNextAction;
 
     // Additional field for getBabsWithMateriCount()
-    @ColumnInfo(name = "materi_count")
     private int materiCount;
 
     // Default constructor
@@ -93,7 +74,6 @@ public class Bab implements java.io.Serializable {
     }
 
     // Constructor minimal
-    @Ignore
     public Bab(String namaBab, int urutan) {
         this.namaBab = namaBab;
         this.urutan = urutan;
@@ -102,7 +82,6 @@ public class Bab implements java.io.Serializable {
     }
 
     // Constructor with unlock status
-    @Ignore
     public Bab(String namaBab, int urutan, boolean isUnlocked) {
         this.namaBab = namaBab;
         this.urutan = urutan;
@@ -286,6 +265,33 @@ public class Bab implements java.io.Serializable {
             return "Sedang Belajar (" + completedMateri + "/" + totalMateri + ")";
         } else {
             return "Belum Dimulai";
+        }
+    }
+
+    /**
+     * Update unlock status based on progress
+     * Quiz is unlocked when progress is >= 80%
+     */
+    public void updateUnlockStatus() {
+        this.isUnlocked = (progressPercentage >= 80) || (idBab == 1); // First bab always unlocked
+    }
+
+    /**
+     * Simplified logic: materi langsung selesai saat dibuka
+     * Tidak ada status 'sedang_belajar' lagi
+     */
+    public boolean isCompleted() {
+        return progressPercentage >= 100;
+    }
+
+    /**
+     * Get status text untuk display (simplified)
+     */
+    public String getStatusText() {
+        if (isCompleted()) {
+            return "Selesai (" + completedMateri + "/" + totalMateri + ")";
+        } else {
+            return "Belum Dimulai (" + completedMateri + "/" + totalMateri + ")";
         }
     }
 

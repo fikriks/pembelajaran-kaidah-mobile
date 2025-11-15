@@ -31,9 +31,10 @@ public class ApiConstants {
 
     public static final String SESI_START = "sesi/start";
     public static final String SESI_ACTIVE = "sesi/active";
+    public static final String SESI_FINISH = "sesi/finish";
     public static final String SESI_DETAIL = "sesi/{id}";
     public static final String SESI_JAWAB = "sesi/{id}/jawab";
-    public static final String SESI_FINISH = "sesi/{id}/finish";
+    public static final String SESI_FINISH_WITH_ID = "sesi/{id}/finish";
     public static final String SESI_HASIL = "sesi/{id}/hasil";
 
     public static final String PROGRESS_LIST = "progress";

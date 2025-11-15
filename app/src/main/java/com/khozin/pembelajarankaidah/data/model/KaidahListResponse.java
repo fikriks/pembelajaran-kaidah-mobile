@@ -2,6 +2,7 @@ package com.khozin.pembelajarankaidah.data.model;
 
 import com.google.gson.annotations.SerializedName;
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Response wrapper untuk API endpoint yang mengembalikan data dengan struktur nested

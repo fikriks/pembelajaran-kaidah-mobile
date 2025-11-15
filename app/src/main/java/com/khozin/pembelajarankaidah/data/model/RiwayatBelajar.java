@@ -1,120 +1,73 @@
 package com.khozin.pembelajarankaidah.data.model;
 
-import androidx.room.Entity;
-import androidx.room.PrimaryKey;
-import androidx.room.ColumnInfo;
-import androidx.room.ForeignKey;
-import androidx.room.Ignore;
-import androidx.room.Index;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.google.gson.annotations.SerializedName;
+import java.io.Serializable;
 
 /**
- * Entity RiwayatBelajar untuk tabel riwayat_belajar
- * Sesuai database schema di CLAUDE.md
- * Tracking progress pembelajaran siswa per materi
+ * Model RiwayatBelajar untuk tracking progress pembelajaran siswa per materi
+ * API-only model - tidak menggunakan Room Database
  */
-@Entity(tableName = "riwayat_belajar",
-        indices = {
-            @Index(value = {"id_siswa"}),
-            @Index(value = {"id_materi"}),
-            @Index(value = {"id_siswa", "id_materi"}),
-            @Index(value = {"status"}),
-            @Index(value = {"waktu_diubah"})
-        },
-        foreignKeys = {
-            @ForeignKey(entity = Siswa.class,
-                    parentColumns = "id",
-                    childColumns = "id_siswa",
-                    onDelete = ForeignKey.CASCADE,
-                    onUpdate = ForeignKey.CASCADE,
-                    deferred = true),
-            @ForeignKey(entity = MateriKaidah.class,
-                    parentColumns = "id_materi",
-                    childColumns = "id_materi",
-                    onDelete = ForeignKey.CASCADE,
-                    onUpdate = ForeignKey.CASCADE,
-                    deferred = true)
-        }
-    )
-public class RiwayatBelajar {
-
-    @PrimaryKey(autoGenerate = true)
-    @ColumnInfo(name = "id_riwayat")
-    private int idRiwayat;
-
-    @ColumnInfo(name = "id_siswa")
-    private int idSiswa;
-
-    @ColumnInfo(name = "id_materi")
-    private int idMateri;
-
-    @SerializedName("status")
-    @NonNull
-    @ColumnInfo(name = "status")
-    private String status; // belum_dimulai, sedang_belajar, selesai
-
-    @ColumnInfo(name = "persentase_penguasaan")
-    private float persentasePenguasaan;
-
-    @SerializedName("waktu_akses_terakhir")
-    @Nullable
-    @ColumnInfo(name = "waktu_akses_terakhir")
-    private String waktuAksesTerakhir;
-
-    @SerializedName("waktu_dibuat")
-    @ColumnInfo(name = "waktu_dibuat")
-    private String waktuDibuat;
-
-    @SerializedName("waktu_diubah")
-    @ColumnInfo(name = "waktu_diubah")
-    private String waktuDiubah;
-
-    // Additional fields untuk mobile app
-    @ColumnInfo(name = "materi_judul")
-    private String materiJudul;
-
-    @ColumnInfo(name = "siswa_nama")
-    private String siswaNama;
-
-    @ColumnInfo(name = "total_sesi_diikuti")
-    private int totalSesiDiikuti = 0;
-
-    @ColumnInfo(name = "rata_rata_skor")
-    private float rataRataSkor = 0.0f;
-
-    @ColumnInfo(name = "total_waktu_belajar_menit")
-    private int totalWaktuBelajarMenit = 0;
-
-    @ColumnInfo(name = "streak_hari")
-    private int streakHari = 0;
-
-    @ColumnInfo(name = "tanggal_selesai_terakhir")
-    private String tanggalSelesaiTerakhir;
+public class RiwayatBelajar implements Serializable {
 
     // Status constants
     public static final String STATUS_BELUM_DIMULAI = "belum_dimulai";
-    public static final String STATUS_SEDANG_BELAJAR = "sedang_belajar";
+    public static final String STATUS_SEDANG_PROGRES = "sedang_progres";
     public static final String STATUS_SELESAI = "selesai";
 
-    // Default constructor
+    @SerializedName("id_riwayat")
+    private int idRiwayat;
+
+    @SerializedName("id_siswa")
+    private int idSiswa;
+
+    @SerializedName("id_materi")
+    private int idMateri;
+
+    @SerializedName("status_progress")
+    private String statusProgress;
+
+    @SerializedName("waktu_mulai")
+    private String waktuMulai;
+
+    @SerializedName("waktu_selesai")
+    private String waktuSelesai;
+
+    @SerializedName("durasi_menit")
+    private int durasiMenit;
+
+    @SerializedName("skor_akhir")
+    private int skorAkhir;
+
+    private String catatan;
+    private int progressPercentage = 0; // Additional field for compatibility
+
+    // Additional fields for mobile app
+    @SerializedName("created_at")
+    private String createdAt;
+
+    @SerializedName("updated_at")
+    private String updatedAt;
+
+    // Additional fields from API response
+    // Note: persentase_penguasaan dihapus karena logic jadi simpler (0% atau 100%)
+    @SerializedName("status")
+    private String status;
+
+    // Constructor
     public RiwayatBelajar() {
-        this.status = STATUS_BELUM_DIMULAI;
-        this.persentasePenguasaan = 0.0f;
-        this.totalSesiDiikuti = 0;
-        this.rataRataSkor = 0.0f;
-        this.totalWaktuBelajarMenit = 0;
-        this.streakHari = 0;
-        this.waktuDibuat = getCurrentTimestamp();
+        this.statusProgress = "STARTED";
+        this.durasiMenit = 0;
+        this.skorAkhir = 0;
     }
 
-    // Constructor untuk membuat riwayat baru
-    @Ignore
+    // Constructor with parameters
     public RiwayatBelajar(int idSiswa, int idMateri) {
         this();
         this.idSiswa = idSiswa;
         this.idMateri = idMateri;
+        this.waktuMulai = java.time.Instant.now().toString();
     }
 
     // Getters and Setters
@@ -142,257 +95,102 @@ public class RiwayatBelajar {
         this.idMateri = idMateri;
     }
 
-    @NonNull
-    public String getStatus() {
-        return status;
+    public String getStatusProgress() {
+        return statusProgress;
     }
 
-    public void setStatus(@NonNull String status) {
-        this.status = status;
-        this.waktuDiubah = getCurrentTimestamp();
+    public void setStatusProgress(String statusProgress) {
+        this.statusProgress = statusProgress;
     }
 
-    public float getPersentasePenguasaan() {
-        return persentasePenguasaan;
+    public String getWaktuMulai() {
+        return waktuMulai;
     }
 
-    public void setPersentasePenguasaan(float persentasePenguasaan) {
-        this.persentasePenguasaan = persentasePenguasaan;
-        this.updateStatusFromProgress();
+    public void setWaktuMulai(String waktuMulai) {
+        this.waktuMulai = waktuMulai;
     }
 
-    @Nullable
-    public String getWaktuAksesTerakhir() {
-        return waktuAksesTerakhir;
+    public String getWaktuSelesai() {
+        return waktuSelesai;
     }
 
-    public void setWaktuAksesTerakhir(@Nullable String waktuAksesTerakhir) {
-        this.waktuAksesTerakhir = waktuAksesTerakhir;
+    public void setWaktuSelesai(String waktuSelesai) {
+        this.waktuSelesai = waktuSelesai;
     }
 
-    public String getWaktuDibuat() {
-        return waktuDibuat;
+    public int getDurasiMenit() {
+        return durasiMenit;
     }
 
-    public void setWaktuDibuat(String waktuDibuat) {
-        this.waktuDibuat = waktuDibuat;
+    public void setDurasiMenit(int durasiMenit) {
+        this.durasiMenit = durasiMenit;
     }
 
-    public String getWaktuDiubah() {
-        return waktuDiubah;
+    public int getSkorAkhir() {
+        return skorAkhir;
     }
 
-    public void setWaktuDiubah(String waktuDiubah) {
-        this.waktuDiubah = waktuDiubah;
+    public void setSkorAkhir(int skorAkhir) {
+        this.skorAkhir = skorAkhir;
     }
 
-    @Nullable
-    public String getMateriJudul() {
-        return materiJudul;
+    public String getCatatan() {
+        return catatan;
     }
 
-    public void setMateriJudul(@Nullable String materiJudul) {
-        this.materiJudul = materiJudul;
+    public void setCatatan(String catatan) {
+        this.catatan = catatan;
     }
 
-    @Nullable
-    public String getSiswaNama() {
-        return siswaNama;
+    public String getCreatedAt() {
+        return createdAt;
     }
 
-    public void setSiswaNama(@Nullable String siswaNama) {
-        this.siswaNama = siswaNama;
+    public void setCreatedAt(String createdAt) {
+        this.createdAt = createdAt;
     }
 
-    public int getTotalSesiDiikuti() {
-        return totalSesiDiikuti;
+    public String getUpdatedAt() {
+        return updatedAt;
     }
 
-    public void setTotalSesiDiikuti(int totalSesiDiikuti) {
-        this.totalSesiDiikuti = totalSesiDiikuti;
-    }
-
-    public float getRataRataSkor() {
-        return rataRataSkor;
-    }
-
-    public void setRataRataSkor(float rataRataSkor) {
-        this.rataRataSkor = rataRataSkor;
-    }
-
-    public int getTotalWaktuBelajarMenit() {
-        return totalWaktuBelajarMenit;
-    }
-
-    public void setTotalWaktuBelajarMenit(int totalWaktuBelajarMenit) {
-        this.totalWaktuBelajarMenit = totalWaktuBelajarMenit;
-    }
-
-    public int getStreakHari() {
-        return streakHari;
-    }
-
-    public void setStreakHari(int streakHari) {
-        this.streakHari = streakHari;
-    }
-
-    @Nullable
-    public String getTanggalSelesaiTerakhir() {
-        return tanggalSelesaiTerakhir;
-    }
-
-    public void setTanggalSelesaiTerakhir(@Nullable String tanggalSelesaiTerakhir) {
-        this.tanggalSelesaiTerakhir = tanggalSelesaiTerakhir;
+    public void setUpdatedAt(String updatedAt) {
+        this.updatedAt = updatedAt;
     }
 
     /**
-     * Get current timestamp
+     * Check if learning is completed
      */
-    private String getCurrentTimestamp() {
-        return String.valueOf(System.currentTimeMillis());
+    public boolean isCompleted() {
+        return "COMPLETED".equals(statusProgress);
     }
 
     /**
-     * Update status based on progress percentage
+     * Check if learning is in progress
      */
-    private void updateStatusFromProgress() {
-        if (persentasePenguasaan <= 0) {
-            this.status = STATUS_BELUM_DIMULAI;
-        } else if (persentasePenguasaan < 100) {
-            this.status = STATUS_SEDANG_BELAJAR;
-        } else {
-            this.status = STATUS_SELESAI;
+    public boolean isInProgress() {
+        return "STARTED".equals(statusProgress);
+    }
+
+    /**
+     * Mark learning as completed
+     */
+    public void markAsCompleted() {
+        this.statusProgress = "COMPLETED";
+        this.waktuSelesai = java.time.Instant.now().toString();
+    }
+
+    /**
+     * Get completion status as percentage
+     */
+    public int getCompletionPercentage() {
+        if ("COMPLETED".equals(statusProgress)) {
+            return 100;
+        } else if ("STARTED".equals(statusProgress)) {
+            return 50; // Assume halfway for started items
         }
-    }
-
-    /**
-     * Update akses terakhir
-     */
-    public void updateAksesTerakhir() {
-        this.waktuAksesTerakhir = getCurrentTimestamp();
-        this.waktuDiubah = getCurrentTimestamp();
-    }
-
-    /**
-     * Increment progress
-     */
-    public void incrementProgress(float increment) {
-        this.persentasePenguasaan = Math.min(100.0f, this.persentasePenguasaan + increment);
-        this.updateStatusFromProgress();
-        this.updateAksesTerakhir();
-    }
-
-    /**
-     * Tambah sesi dan update rata-rata skor
-     */
-    public void tambahSesi(float skorBaru, int durasiMenit) {
-        this.totalSesiDiikuti++;
-        this.totalWaktuBelajarMenit += durasiMenit;
-
-        // Update rata-rata skor
-        float totalSkor = this.rataRataSkor * (this.totalSesiDiikuti - 1) + skorBaru;
-        this.rataRataSkor = totalSkor / this.totalSesiDiikuti;
-
-        this.updateAksesTerakhir();
-    }
-
-    /**
-     * Get status text untuk display
-     */
-    public String getStatusText() {
-        switch (status) {
-            case STATUS_BELUM_DIMULAI:
-                return "Belum Dimulai";
-            case STATUS_SEDANG_BELAJAR:
-                return "Sedang Belajar";
-            case STATUS_SELESAI:
-                return "Selesai";
-            default:
-                return status;
-        }
-    }
-
-    /**
-     * Get warna untuk status
-     */
-    public int getStatusColor() {
-        switch (status) {
-            case STATUS_BELUM_DIMULAI:
-                return android.graphics.Color.parseColor("#9E9E9E"); // Grey
-            case STATUS_SEDANG_BELAJAR:
-                return android.graphics.Color.parseColor("#2196F3"); // Blue
-            case STATUS_SELESAI:
-                return android.graphics.Color.parseColor("#4CAF50"); // Green
-            default:
-                return android.graphics.Color.parseColor("#9E9E9E"); // Grey
-        }
-    }
-
-    /**
-     * Get formatted waktu belajar
-     */
-    public String getFormattedWaktuBelajar() {
-        if (totalWaktuBelajarMenit >= 60) {
-            int jam = totalWaktuBelajarMenit / 60;
-            int menit = totalWaktuBelajarMenit % 60;
-            return String.format("%d jam %d menit", jam, menit);
-        } else {
-            return String.format("%d menit", totalWaktuBelajarMenit);
-        }
-    }
-
-    /**
-     * Get progress grade
-     */
-    public String getProgressGrade() {
-        if (persentasePenguasaan >= 90) return "A";
-        if (persentasePenguasaan >= 80) return "B";
-        if (persentasePenguasaan >= 70) return "C";
-        if (persentasePenguasaan >= 60) return "D";
-        return "E";
-    }
-
-    /**
-     * Check apakah sedang aktif belajar
-     */
-    public boolean isSedangBelajar() {
-        return STATUS_SEDANG_BELAJAR.equals(status);
-    }
-
-    /**
-     * Check apakah sudah selesai
-     */
-    public boolean isSelesai() {
-        return STATUS_SELESAI.equals(status);
-    }
-
-    /**
-     * Check apakah belum dimulai
-     */
-    public boolean isBelumDimulai() {
-        return STATUS_BELUM_DIMULAI.equals(status);
-    }
-
-    /**
-     * Check apakah perlu review (skor < 70%)
-     */
-    public boolean perluReview() {
-        return rataRataSkor < 70.0f && totalSesiDiikuti > 0;
-    }
-
-    /**
-     * Get recommendation text
-     */
-    public String getRekomendasiText() {
-        if (isBelumDimulai()) {
-            return "Mulai belajar materi ini";
-        } else if (isSedangBelajar()) {
-            return "Lanjutkan belajar untuk menyelesaikan";
-        } else if (perluReview()) {
-            return "Review kembali materi ini (skor < 70%)";
-        } else {
-            return "Materi sudah dikuasai dengan baik";
-        }
+        return 0;
     }
 
     @Override
@@ -401,10 +199,44 @@ public class RiwayatBelajar {
                 "idRiwayat=" + idRiwayat +
                 ", idSiswa=" + idSiswa +
                 ", idMateri=" + idMateri +
-                ", status='" + status + '\'' +
-                ", persentasePenguasaan=" + persentasePenguasaan +
-                ", totalSesiDiikuti=" + totalSesiDiikuti +
-                ", rataRataSkor=" + rataRataSkor +
+                ", statusProgress='" + statusProgress + '\'' +
+                ", durasiMenit=" + durasiMenit +
+                ", skorAkhir=" + skorAkhir +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+
+        RiwayatBelajar that = (RiwayatBelajar) obj;
+        return idRiwayat == that.idRiwayat &&
+                idSiswa == that.idSiswa &&
+                idMateri == that.idMateri;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = idRiwayat;
+        result = 31 * result + idSiswa;
+        result = 31 * result + idMateri;
+        return result;
+    }
+
+    // Legacy method aliases for backward compatibility
+    public String getStatus() {
+        return getStatusProgress();
+    }
+
+    public void setStatus(String status) {
+        this.statusProgress = status;
+    }
+
+    // Note: setPersentasePenguasaan method dihapus karena tidak diperlukan lagi
+
+    public void updateAksesTerakhir() {
+        // Update last access time - placeholder for API-only approach
+        this.waktuSelesai = java.time.Instant.now().toString();
     }
 }

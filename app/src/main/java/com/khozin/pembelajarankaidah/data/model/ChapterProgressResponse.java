@@ -2,6 +2,7 @@ package com.khozin.pembelajarankaidah.data.model;
 
 import com.google.gson.annotations.SerializedName;
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Response model untuk chapter progress overview API

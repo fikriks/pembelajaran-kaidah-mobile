@@ -2,6 +2,7 @@ package com.khozin.pembelajarankaidah.data.model;
 
 import com.google.gson.annotations.SerializedName;
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Model untuk menampung data kaidah yang dikelompokkan per bab

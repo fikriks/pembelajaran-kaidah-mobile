@@ -1,6 +1,5 @@
 package com.khozin.pembelajarankaidah.data.repository;
 
-import android.app.Application;
 import android.content.Context;
 
 import androidx.lifecycle.LiveData;
@@ -10,10 +9,10 @@ import com.khozin.pembelajarankaidah.data.model.Bab;
 import com.khozin.pembelajarankaidah.data.model.BabListResponse;
 import com.khozin.pembelajarankaidah.data.model.ChapterProgressResponse;
 import com.khozin.pembelajarankaidah.data.remote.ApiService;
-import com.khozin.pembelajarankaidah.database.AppDatabase;
-import com.khozin.pembelajarankaidah.database.dao.BabDao;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.ArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -23,11 +22,10 @@ import retrofit2.Response;
 
 /**
  * Repository untuk Bab/Chapter data
- * Menghandle operasi data antara local database dan API
+ * API-only repository - tidak menggunakan local database
  */
 public class BabRepository {
 
-    private final BabDao babDao;
     private final ApiService apiService;
     private final Executor executor;
 
@@ -37,46 +35,74 @@ public class BabRepository {
     private final MutableLiveData<Boolean> loadingLiveData = new MutableLiveData<>();
     private final MutableLiveData<String> errorLiveData = new MutableLiveData<>();
 
+    // Local cache untuk chapters
+    private List<Bab> cachedChapters = new ArrayList<>();
+
     public BabRepository(Context context, ApiService apiService) {
-        AppDatabase database = AppDatabase.getDatabase(context);
-        this.babDao = database.babDao();
         this.apiService = apiService;
         this.executor = Executors.newSingleThreadExecutor();
     }
 
     /**
-     * Get all chapters from local database
+     * Get all chapters from cache
      */
     public LiveData<List<Bab>> getAllChapters() {
-        return babDao.getAllBabs();
+        MutableLiveData<List<Bab>> result = new MutableLiveData<>();
+        result.setValue(cachedChapters);
+        return result;
     }
 
     /**
-     * Get active chapters from local database
+     * Get active chapters from cache
      */
     public LiveData<List<Bab>> getActiveChapters() {
-        return babDao.getActiveBabs();
+        MutableLiveData<List<Bab>> result = new MutableLiveData<>();
+        List<Bab> activeChapters = new ArrayList<>();
+        for (Bab bab : cachedChapters) {
+            if (bab.isActive()) {
+                activeChapters.add(bab);
+            }
+        }
+        result.setValue(activeChapters);
+        return result;
     }
 
     /**
-     * Get chapters with progress from local database
+     * Get chapters with progress from cache
      */
     public LiveData<List<Bab>> getChaptersWithProgress() {
-        return babDao.getBabsWithProgress();
+        MutableLiveData<List<Bab>> result = new MutableLiveData<>();
+        result.setValue(cachedChapters);
+        return result;
     }
 
     /**
-     * Get unlocked chapters from local database
+     * Get unlocked chapters from cache
      */
     public LiveData<List<Bab>> getUnlockedChapters() {
-        return babDao.getUnlockedBabs();
+        MutableLiveData<List<Bab>> result = new MutableLiveData<>();
+        List<Bab> unlockedChapters = new ArrayList<>();
+        for (Bab bab : cachedChapters) {
+            if (bab.isUnlocked()) {
+                unlockedChapters.add(bab);
+            }
+        }
+        result.setValue(unlockedChapters);
+        return result;
     }
 
     /**
-     * Get chapter by ID
+     * Get chapter by ID from cache
      */
     public LiveData<Bab> getChapterById(int chapterId) {
-        return babDao.getBabByIdLiveData(chapterId);
+        MutableLiveData<Bab> result = new MutableLiveData<>();
+        for (Bab bab : cachedChapters) {
+            if (bab.getIdBab() == chapterId) {
+                result.setValue(bab);
+                break;
+            }
+        }
+        return result;
     }
 
     /**
@@ -96,8 +122,8 @@ public class BabRepository {
                         List<Bab> chapters = babResponse.getData().getChapters();
                         chaptersLiveData.setValue(chapters);
 
-                        // Save to local database in background
-                        saveChaptersToLocal(chapters);
+                        // Cache chapters locally
+                        cacheChapters(chapters);
                     } else {
                         errorLiveData.setValue(babResponse.getMessage() != null ?
                                 babResponse.getMessage() : "Failed to load chapters");
@@ -131,8 +157,8 @@ public class BabRepository {
                     if (progressResponse.isSuccess()) {
                         progressOverviewLiveData.setValue(progressResponse);
 
-                        // Update local database with progress info
-                        updateLocalProgress(progressResponse);
+                        // Update cached chapters with progress info
+                        updateCachedProgress(progressResponse);
                     } else {
                         errorLiveData.setValue(progressResponse.getMessage() != null ?
                                 progressResponse.getMessage() : "Failed to load progress");
@@ -151,48 +177,49 @@ public class BabRepository {
     }
 
     /**
-     * Save chapters to local database
+     * Cache chapters locally
      */
-    private void saveChaptersToLocal(List<Bab> chapters) {
+    private void cacheChapters(List<Bab> chapters) {
         executor.execute(() -> {
             try {
-                // Clear existing chapters first
-                babDao.deleteAllBabs();
-
-                // Insert new chapters
-                babDao.insertAll(chapters);
+                cachedChapters.clear();
+                cachedChapters.addAll(chapters);
             } catch (Exception e) {
-                errorLiveData.postValue("Error saving chapters: " + e.getMessage());
+                errorLiveData.postValue("Error caching chapters: " + e.getMessage());
             }
         });
     }
 
     /**
-     * Update local progress information
+     * Update cached progress information
      */
-    private void updateLocalProgress(ChapterProgressResponse progressResponse) {
+    private void updateCachedProgress(ChapterProgressResponse progressResponse) {
         executor.execute(() -> {
             try {
                 if (progressResponse.getData() != null &&
                     progressResponse.getData().getChapters() != null) {
 
-                    for (Bab chapter : progressResponse.getData().getChapters()) {
-                        babDao.updateProgressInfo(
-                                chapter.getIdBab(),
-                                chapter.getTotalMateri(),
-                                chapter.getCompletedMateri(),
-                                chapter.getInProgressMateri(),
-                                chapter.getNotStartedMateri(),
-                                chapter.getProgressPercentage(),
-                                chapter.getStatusColor(),
-                                chapter.getNextAction()
-                        );
-
-                        babDao.updateUnlockStatus(chapter.getIdBab(), chapter.isUnlocked());
+                    for (Bab progressChapter : progressResponse.getData().getChapters()) {
+                        // Find corresponding chapter in cache
+                        for (Bab cachedChapter : cachedChapters) {
+                            if (cachedChapter.getIdBab() == progressChapter.getIdBab()) {
+                                // Update cached chapter with progress info
+                                cachedChapter.setTotalMateri(progressChapter.getTotalMateri());
+                                cachedChapter.setCompletedMateri(progressChapter.getCompletedMateri());
+                                cachedChapter.setInProgressMateri(progressChapter.getInProgressMateri());
+                                cachedChapter.setNotStartedMateri(progressChapter.getNotStartedMateri());
+                                cachedChapter.setProgressPercentage(progressChapter.getProgressPercentage());
+                                cachedChapter.setStatusColor(progressChapter.getStatusColor());
+                                cachedChapter.setNextAction(progressChapter.getNextAction());
+                                // Automatically update unlock status based on progress
+                                cachedChapter.updateUnlockStatus();
+                                break;
+                            }
+                        }
                     }
                 }
             } catch (Exception e) {
-                errorLiveData.postValue("Error updating progress: " + e.getMessage());
+                errorLiveData.postValue("Error updating cached progress: " + e.getMessage());
             }
         });
     }
@@ -201,25 +228,47 @@ public class BabRepository {
      * Get chapter by ID (synchronous)
      */
     public Bab getChapterByIdSync(int chapterId) {
-        return babDao.getBabById(chapterId);
+        for (Bab bab : cachedChapters) {
+            if (bab.getIdBab() == chapterId) {
+                return bab;
+            }
+        }
+        return null;
     }
 
     /**
      * Get active chapters (synchronous)
      */
     public List<Bab> getActiveChaptersSync() {
-        return babDao.getActiveBabsSync();
+        List<Bab> activeChapters = new ArrayList<>();
+        for (Bab bab : cachedChapters) {
+            if (bab.isActive()) {
+                activeChapters.add(bab);
+            }
+        }
+        return activeChapters;
     }
 
     /**
      * Search chapters by name
      */
     public List<Bab> searchChapters(String query) {
-        return babDao.searchBabsSync(query);
+        List<Bab> results = new ArrayList<>();
+        if (query == null || query.trim().isEmpty()) {
+            return results;
+        }
+
+        String searchQuery = query.toLowerCase().trim();
+        for (Bab bab : cachedChapters) {
+            if (bab.getNamaBab() != null && bab.getNamaBab().toLowerCase().contains(searchQuery)) {
+                results.add(bab);
+            }
+        }
+        return results;
     }
 
     /**
-     * Update chapter progress
+     * Update chapter progress in cache
      */
     public void updateChapterProgress(int chapterId, int totalMateri, int completedMateri) {
         executor.execute(() -> {
@@ -234,10 +283,21 @@ public class BabRepository {
                 String nextAction = progressPercentage >= 100 ? "review" :
                                  progressPercentage > 0 ? "continue" : "start";
 
-                babDao.updateProgressInfo(
-                        chapterId, totalMateri, completedMateri, inProgressMateri,
-                        notStartedMateri, progressPercentage, statusColor, nextAction
-                );
+                // Update cached chapter
+                for (Bab bab : cachedChapters) {
+                    if (bab.getIdBab() == chapterId) {
+                        bab.setTotalMateri(totalMateri);
+                        bab.setCompletedMateri(completedMateri);
+                        bab.setInProgressMateri(inProgressMateri);
+                        bab.setNotStartedMateri(notStartedMateri);
+                        bab.setProgressPercentage(progressPercentage);
+                        bab.setStatusColor(statusColor);
+                        bab.setNextAction(nextAction);
+                        // Automatically update unlock status based on progress
+                        bab.updateUnlockStatus();
+                        break;
+                    }
+                }
 
                 // Check if next chapter should be unlocked
                 checkAndUnlockNextChapter();
@@ -254,12 +314,14 @@ public class BabRepository {
     private void checkAndUnlockNextChapter() {
         executor.execute(() -> {
             try {
-                List<Bab> chapters = babDao.getActiveBabsSync();
+                // Find chapters in order
+                cachedChapters.sort((b1, b2) -> Integer.compare(b1.getUrutan(), b2.getUrutan()));
+
                 Bab nextChapterToUnlock = null;
 
-                for (int i = 0; i < chapters.size() - 1; i++) {
-                    Bab currentChapter = chapters.get(i);
-                    Bab nextChapter = chapters.get(i + 1);
+                for (int i = 0; i < cachedChapters.size() - 1; i++) {
+                    Bab currentChapter = cachedChapters.get(i);
+                    Bab nextChapter = cachedChapters.get(i + 1);
 
                     // If current chapter is completed and next chapter is locked
                     if (currentChapter.getProgressPercentage() >= 100 &&
@@ -270,7 +332,7 @@ public class BabRepository {
                 }
 
                 if (nextChapterToUnlock != null) {
-                    babDao.updateUnlockStatus(nextChapterToUnlock.getIdBab(), true);
+                    nextChapterToUnlock.setUnlocked(true);
                 }
             } catch (Exception e) {
                 errorLiveData.postValue("Error unlocking chapter: " + e.getMessage());
@@ -284,20 +346,6 @@ public class BabRepository {
     public void refreshChapters(String authToken) {
         loadChaptersFromApi(authToken);
         loadProgressOverview(authToken);
-    }
-
-    /**
-     * Get statistics
-     */
-    public BabDao.BabStatistics getBabStatistics() {
-        return babDao.getBabStatistics();
-    }
-
-    /**
-     * Get chapters for synchronization
-     */
-    public List<Bab> getChaptersForSync(String lastSync) {
-        return babDao.getBabsForSync(lastSync);
     }
 
     // Getters for LiveData

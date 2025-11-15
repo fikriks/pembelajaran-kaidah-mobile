@@ -16,6 +16,7 @@ import com.khozin.pembelajarankaidah.data.model.KaidahGroup;
 import com.khozin.pembelajarankaidah.data.model.MateriKaidah;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Adapter untuk menampilkan daftar kaidah yang dikelompokkan per bab
@@ -242,7 +243,7 @@ public class KaidahGroupAdapter extends RecyclerView.Adapter<KaidahGroupAdapter.
 
             public void bind(MateriKaidah kaidah, OnKaidahClickListener listener) {
                 // Set judul
-                tvJudulKaidah.setText(kaidah.getJudulKaidah());
+                tvJudulKaidah.setText(kaidah.getJudulMateri());
 
                 // Set deskripsi
                 String deskripsi = kaidah.getDeskripsi();

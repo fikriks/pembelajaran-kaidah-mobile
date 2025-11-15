@@ -14,6 +14,7 @@ import com.khozin.pembelajarankaidah.R;
 import com.khozin.pembelajarankaidah.data.model.MateriKaidah;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Adapter untuk menampilkan daftar lengkap materi kaidah
@@ -93,7 +94,7 @@ public class KaidahAdapter extends RecyclerView.Adapter<KaidahAdapter.ViewHolder
 
         public void bind(MateriKaidah kaidah, OnKaidahClickListener clickListener) {
             // Set judul kaidah
-            tvJudul.setText(kaidah.getJudulKaidah());
+            tvJudul.setText(kaidah.getJudulMateri());
 
             // Set deskripsi
             String deskripsi = kaidah.getDeskripsi();
@@ -105,9 +106,9 @@ public class KaidahAdapter extends RecyclerView.Adapter<KaidahAdapter.ViewHolder
             }
 
             // Set progress
-            float progress = kaidah.getPersentasePenguasaan();
-            tvProgress.setText((int) progress + "%");
-            progressBar.setProgress((int) progress);
+            int progress = kaidah.getProgressPercentage(); // Using simplified logic: 0% or 100%
+            tvProgress.setText(progress + "%");
+            progressBar.setProgress(progress);
 
             // Set status dan warna
             String status = kaidah.getStatus();

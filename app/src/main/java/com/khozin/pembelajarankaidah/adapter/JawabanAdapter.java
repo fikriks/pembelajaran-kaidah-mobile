@@ -12,6 +12,7 @@ import com.khozin.pembelajarankaidah.R;
 import com.khozin.pembelajarankaidah.data.model.Jawaban;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Adapter untuk menampilkan pilihan jawaban
@@ -47,7 +48,7 @@ public class JawabanAdapter extends RecyclerView.Adapter<JawabanAdapter.ViewHold
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Jawaban jawaban = jawabanList.get(position);
-        holder.bind(jawaban, selectedJawabanId, listener);
+        holder.bind(jawaban, selectedJawabanId, listener, position);
     }
 
     @Override
@@ -56,9 +57,13 @@ public class JawabanAdapter extends RecyclerView.Adapter<JawabanAdapter.ViewHold
     }
 
     public void updateData(List<Jawaban> newList) {
+        android.util.Log.d("JawabanAdapter", "updateData called with " + (newList != null ? newList.size() : "null") + " items");
+
         this.jawabanList.clear();
         this.jawabanList.addAll(newList);
         notifyDataSetChanged();
+
+        android.util.Log.d("JawabanAdapter", "Data updated, new getItemCount(): " + getItemCount());
     }
 
     public Jawaban getItemAt(int position) {
@@ -81,16 +86,18 @@ public class JawabanAdapter extends RecyclerView.Adapter<JawabanAdapter.ViewHold
             rootView = itemView;
         }
 
-        public void bind(Jawaban jawaban, int selectedId, OnJawabanClickListener clickListener) {
-            // Set option letter based on urutan
-            String optionLetter = getOptionLetter(jawaban.getUrutan());
+        public void bind(Jawaban jawaban, int selectedId, OnJawabanClickListener clickListener, int position) {
+            // Set option letter based on position (0=A, 1=B, 2=C, 3=D)
+            String optionLetter = getOptionLetter(position + 1);
             tvOptionLetter.setText(optionLetter);
 
             // Set text jawaban
             tvJawaban.setText(jawaban.getJawaban());
 
             // Check if this is selected
-            boolean isSelected = (jawaban.getIdPilihan() == selectedId);
+            Integer idPilihan = jawaban.getIdPilihan();
+            int idPilihanValue = idPilihan != null ? idPilihan : -1;
+            boolean isSelected = (idPilihanValue == selectedId);
 
             // Update UI based on selection
             if (isSelected) {

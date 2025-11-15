@@ -11,6 +11,7 @@ import com.khozin.pembelajarankaidah.R;
 import com.khozin.pembelajarankaidah.data.model.MateriKaidah;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Adapter untuk menampilkan daftar kaidah dalam ukuran kecil
@@ -84,10 +85,10 @@ public class KaidahSmallAdapter extends RecyclerView.Adapter<KaidahSmallAdapter.
 
         public void bind(MateriKaidah kaidah) {
             // Set judul kaidah
-            tvKaidahTitle.setText(kaidah.getJudulKaidah());
+            tvKaidahTitle.setText(kaidah.getJudulMateri());
 
             // Set progress text
-            tvProgress.setText(kaidah.getPersentasePenguasaan() + "%");
+            tvProgress.setText(kaidah.getProgressPercentage() + "%"); // Using simplified logic: 0% or 100%
 
             // Set status text
             String status = kaidah.getStatus();

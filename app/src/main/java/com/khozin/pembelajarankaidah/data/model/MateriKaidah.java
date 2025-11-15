@@ -1,101 +1,78 @@
 package com.khozin.pembelajarankaidah.data.model;
 
-import androidx.room.Entity;
-import androidx.room.PrimaryKey;
-import androidx.room.ColumnInfo;
-import androidx.room.Ignore;
-import androidx.room.Index;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.google.gson.annotations.SerializedName;
 import java.io.Serializable;
 
 /**
- * Entity MateriKaidah untuk tabel materi_kaidah
- * Sesuai database schema di CLAUDE.md
+ * Model MateriKaidah untuk materi pembelajaran kaidah
+ * API-only model - tidak menggunakan Room Database
  */
-@Entity(
-    tableName = "materi_kaidah",
-    indices = {
-        @Index(value = {"id_materi"}, unique = true),
-        @Index(value = {"id_bab"}, unique = true),
-        @Index(value = {"urutan"}),
-        @Index(value = {"id_bab", "urutan"}, unique = true)
-    }
-)
 public class MateriKaidah implements Serializable {
 
-    @PrimaryKey(autoGenerate = true)
-    @ColumnInfo(name = "id_materi")
     @SerializedName("id_materi")
     private int idMateri;
 
     @SerializedName("id_bab")
-    @ColumnInfo(name = "id_bab")
     private int idBab;
 
     @SerializedName("judul_kaidah")
-    @NonNull
-    @ColumnInfo(name = "judul_kaidah")
-    private String judulKaidah;
-
-    @SerializedName("deskripsi")
-    @Nullable
-    @ColumnInfo(name = "deskripsi")
-    private String deskripsi;
+    private String judulMateri;
 
     @SerializedName("penjelasan")
-    @Nullable
-    @ColumnInfo(name = "penjelasan")
-    private String penjelasan;
+    private String kontenMateri;
 
     @SerializedName("contoh")
-    @Nullable
-    @ColumnInfo(name = "contoh")
-    private String contoh;
+    private String contohKalimat;
 
-    @SerializedName("urutan")
-    @ColumnInfo(name = "urutan")
-    private int urutan;
+    private String urutan;
 
-    @ColumnInfo(name = "dibuat_oleh")
-    private int dibuatOleh;
+    @SerializedName("dibuat_oleh")
+    private String dibuatOleh;
 
+    private String isActive;
+
+    // Additional fields for mobile app
+    @SerializedName("created_at")
+    private String createdAt;
+
+    @SerializedName("updated_at")
+    private String updatedAt;
+
+    // Fields from API response
     @SerializedName("waktu_dibuat")
-    @ColumnInfo(name = "waktu_dibuat")
     private String waktuDibuat;
 
     @SerializedName("waktu_diubah")
-    @ColumnInfo(name = "waktu_diubah")
     private String waktuDiubah;
 
-    // Additional fields untuk mobile app
-    @ColumnInfo(name = "total_soal")
-    private int totalSoal = 0;
+    @SerializedName("deskripsi")
+    private String deskripsi;
 
-    @ColumnInfo(name = "is_completed")
-    private boolean isCompleted = false;
+    @SerializedName("deskripsi_bab")
+    private String deskripsiBab;
 
-    @ColumnInfo(name = "progress_percentage")
+    @SerializedName("progress_percentage")
     private int progressPercentage = 0;
 
     @SerializedName("status")
-    @ColumnInfo(name = "status")
-    private String status = "belum_dimulai";
+    private String status;
 
-    @SerializedName("is_locked")
-    @ColumnInfo(name = "is_locked")
-    private boolean isLocked = false;
+    @SerializedName("completed")
+    private boolean completed = false;
 
-    // Default constructor
+    // Constructor
     public MateriKaidah() {
-        this.urutan = 0;
+        this.isActive = "1"; // Default active
     }
 
-    // Constructor minimal
-    @Ignore
-    public MateriKaidah(String judulKaidah, int urutan) {
-        this.judulKaidah = judulKaidah;
+    // Constructor with parameters
+    public MateriKaidah(int idBab, String judulMateri, String kontenMateri, String urutan) {
+        this();
+        this.idBab = idBab;
+        this.judulMateri = judulMateri;
+        this.kontenMateri = kontenMateri;
         this.urutan = urutan;
     }
 
@@ -116,59 +93,138 @@ public class MateriKaidah implements Serializable {
         this.idBab = idBab;
     }
 
-    @NonNull
-    public String getJudulKaidah() {
-        return judulKaidah;
+    public String getJudulMateri() {
+        return judulMateri;
     }
 
-    public void setJudulKaidah(@NonNull String judulKaidah) {
-        this.judulKaidah = judulKaidah;
+    public void setJudulMateri(String judulMateri) {
+        this.judulMateri = judulMateri;
     }
 
-    @Nullable
-    public String getDeskripsi() {
-        return deskripsi;
+    public String getKontenMateri() {
+        return kontenMateri;
     }
 
-    public void setDeskripsi(@Nullable String deskripsi) {
-        this.deskripsi = deskripsi;
+    public void setKontenMateri(String kontenMateri) {
+        this.kontenMateri = kontenMateri;
     }
 
-    @Nullable
-    public String getPenjelasan() {
-        return penjelasan;
+    public String getContohKalimat() {
+        return contohKalimat;
     }
 
-    public void setPenjelasan(@Nullable String penjelasan) {
-        this.penjelasan = penjelasan;
+    public void setContohKalimat(String contohKalimat) {
+        this.contohKalimat = contohKalimat;
     }
 
-    @Nullable
-    public String getContoh() {
-        return contoh;
-    }
-
-    public void setContoh(@Nullable String contoh) {
-        this.contoh = contoh;
-    }
-
-    
-    public int getUrutan() {
+    public String getUrutan() {
         return urutan;
     }
 
-    public void setUrutan(int urutan) {
+    public void setUrutan(String urutan) {
         this.urutan = urutan;
     }
 
-    public int getDibuatOleh() {
+    public String getDibuatOleh() {
         return dibuatOleh;
     }
 
-    public void setDibuatOleh(int dibuatOleh) {
+    public void setDibuatOleh(String dibuatOleh) {
         this.dibuatOleh = dibuatOleh;
     }
 
+    public String getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(String isActive) {
+        this.isActive = isActive;
+    }
+
+    public boolean isActive() {
+        return "1".equals(isActive);
+    }
+
+    public String getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(String createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public String getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(String updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    /**
+     * Check if materi contains Arabic text
+     */
+    public boolean isArabicText() {
+        if (judulMateri != null) {
+            for (int i = 0; i < judulMateri.length(); i++) {
+                char c = judulMateri.charAt(i);
+                if (c >= 0x0600 && c <= 0x06FF) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Get display content (clean from HTML tags if any)
+     */
+    public String getDisplayContent() {
+        if (kontenMateri == null) return "";
+        // Remove basic HTML tags if present
+        return kontenMateri.replaceAll("<[^>]*>", "").trim();
+    }
+
+    /**
+     * Get short description for preview
+     */
+    public String getShortDescription() {
+        String content = getDisplayContent();
+        if (content.length() > 100) {
+            return content.substring(0, 97) + "...";
+        }
+        return content;
+    }
+
+    @Override
+    public String toString() {
+        return "MateriKaidah{" +
+                "idMateri=" + idMateri +
+                ", idBab=" + idBab +
+                ", judulMateri='" + judulMateri + '\'' +
+                ", urutan='" + urutan + '\'' +
+                ", isActive='" + isActive + '\'' +
+                '}';
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+
+        MateriKaidah that = (MateriKaidah) obj;
+        return idMateri == that.idMateri &&
+                idBab == that.idBab;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = idMateri;
+        result = 31 * result + idBab;
+        return result;
+    }
+
+    // Getter methods for new fields
     public String getWaktuDibuat() {
         return waktuDibuat;
     }
@@ -185,20 +241,20 @@ public class MateriKaidah implements Serializable {
         this.waktuDiubah = waktuDiubah;
     }
 
-    public int getTotalSoal() {
-        return totalSoal;
+    public String getDeskripsi() {
+        return deskripsi;
     }
 
-    public void setTotalSoal(int totalSoal) {
-        this.totalSoal = totalSoal;
+    public void setDeskripsi(String deskripsi) {
+        this.deskripsi = deskripsi;
     }
 
-    public boolean isCompleted() {
-        return isCompleted;
+    public String getDeskripsiBab() {
+        return deskripsiBab;
     }
 
-    public void setCompleted(boolean completed) {
-        isCompleted = completed;
+    public void setDeskripsiBab(String deskripsiBab) {
+        this.deskripsiBab = deskripsiBab;
     }
 
     public int getProgressPercentage() {
@@ -217,52 +273,50 @@ public class MateriKaidah implements Serializable {
         this.status = status;
     }
 
-    public boolean isLocked() {
-        return isLocked;
+    public boolean isCompleted() {
+        return completed;
     }
 
-    public void setLocked(boolean locked) {
-        isLocked = locked;
+    public void setCompleted(boolean completed) {
+        this.completed = completed;
     }
 
-    public float getPersentasePenguasaan() {
-        return progressPercentage;
+    // Legacy method aliases for backward compatibility
+    public String getJudulKaidah() {
+        return getJudulMateri();
     }
 
-    
-    /**
-     * Mendapatkan deskripsi singkat untuk display
-     */
-    public String getDeskripsiSingkat() {
-        if (deskripsi != null && !deskripsi.isEmpty() && deskripsi.length() > 50) {
-            return deskripsi.substring(0, 47) + "...";
+    public void setJudulKaidah(String judulKaidah) {
+        setJudulMateri(judulKaidah);
+    }
+
+    // Use deskripsi field for UI, fallback to kontenMateri
+    public String getDeskripsiForUI() {
+        return deskripsi != null ? deskripsi : getKontenMateri();
+    }
+
+    public int getPersentasePenguasaan() {
+        return getProgressPercentage();
+    }
+
+    // Legacy method aliases for backward compatibility
+    public String getPenjelasan() {
+        return kontenMateri; // Use kontenMateri as penjelasan
+    }
+
+    public String getContoh() {
+        return contohKalimat; // Use contohKalimat as contoh
+    }
+
+    // Compatibility method for sorting
+    public Integer getUrutanAsInt() {
+        if (urutan == null || urutan.isEmpty()) {
+            return 0;
         }
-        return deskripsi != null ? deskripsi : "";
-    }
-
-    /**
-     * Mendapatkan status pembelajaran dalam bentuk text
-     */
-    public String getStatusPembelajaran() {
-        if (isCompleted) {
-            return "Selesai";
-        } else if (progressPercentage > 0) {
-            return "Sedang Belajar (" + progressPercentage + "%)";
-        } else {
-            return "Belum Dimulai";
+        try {
+            return Integer.parseInt(urutan);
+        } catch (NumberFormatException e) {
+            return 0;
         }
-    }
-
-    
-    @Override
-    public String toString() {
-        return "MateriKaidah{" +
-                "idMateri=" + idMateri +
-                ", idBab=" + idBab +
-                ", judulKaidah='" + judulKaidah + '\'' +
-                ", urutan=" + urutan +
-                ", totalSoal=" + totalSoal +
-                ", progressPercentage=" + progressPercentage +
-                '}';
     }
 }

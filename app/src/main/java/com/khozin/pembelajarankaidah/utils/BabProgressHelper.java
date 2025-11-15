@@ -3,11 +3,10 @@ package com.khozin.pembelajarankaidah.utils;
 import android.content.Context;
 import com.khozin.pembelajarankaidah.data.model.MateriKaidah;
 import com.khozin.pembelajarankaidah.data.model.RiwayatBelajar;
-import com.khozin.pembelajarankaidah.database.dao.RiwayatBelajarDao;
-import com.khozin.pembelajarankaidah.database.AppDatabase;
 import com.khozin.pembelajarankaidah.utils.SessionManager;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -17,12 +16,11 @@ import java.util.concurrent.Executors;
 public class BabProgressHelper {
 
     private final Context context;
-    private final RiwayatBelajarDao riwayatDao;
+    // private final RiwayatBelajarDao riwayatDao; // REMOVED;
     private final ExecutorService executorService;
 
     public BabProgressHelper(Context context) {
         this.context = context;
-        this.riwayatDao = AppDatabase.getDatabase(context).riwayatBelajarDao();
         this.executorService = Executors.newSingleThreadExecutor();
     }
 
@@ -55,7 +53,8 @@ public class BabProgressHelper {
                 int completedMateri = 0;
 
                 for (MateriKaidah materi : materiList) {
-                    RiwayatBelajar riwayat = riwayatDao.getTerakhirBySiswaAndMateri(siswaId, materi.getIdMateri());
+                    // TODO: Replace with API call - RiwayatBelajar riwayat = riwayatDao.getTerakhirBySiswaAndMateri(siswaId, materi.getIdMateri());
+                    RiwayatBelajar riwayat = null; // Placeholder for API call
                     if (riwayat != null && riwayat.getStatus().equals(RiwayatBelajar.STATUS_SELESAI)) {
                         completedMateri++;
                     }
@@ -80,20 +79,18 @@ public class BabProgressHelper {
         executorService.execute(() -> {
             try {
                 // Cek apakah riwayat sudah ada
-                RiwayatBelajar existingRiwayat = riwayatDao.getBySiswaAndMateriSync(siswaId, materiId);
+                RiwayatBelajar existingRiwayat = null; // Placeholder for API call
 
                 if (existingRiwayat != null) {
                     // Update riwayat yang sudah ada
                     existingRiwayat.setStatus(RiwayatBelajar.STATUS_SELESAI);
-                    existingRiwayat.setPersentasePenguasaan(100.0f);
                     existingRiwayat.updateAksesTerakhir();
-                    riwayatDao.update(existingRiwayat);
+                    // TODO: Replace with API callupdate(existingRiwayat);
                 } else {
                     // Buat riwayat baru
                     RiwayatBelajar newRiwayat = new RiwayatBelajar(siswaId, materiId);
                     newRiwayat.setStatus(RiwayatBelajar.STATUS_SELESAI);
-                    newRiwayat.setPersentasePenguasaan(100.0f);
-                    riwayatDao.insert(newRiwayat);
+                    // TODO: Replace with API callinsert(newRiwayat);
                 }
 
                 // Callback ke main thread
@@ -153,7 +150,8 @@ public class BabProgressHelper {
      */
     public boolean isMateriCompleted(int siswaId, int materiId) {
         try {
-            RiwayatBelajar riwayat = riwayatDao.getBySiswaAndMateriSync(siswaId, materiId);
+            // TODO: Replace with API call - RiwayatBelajar riwayat = riwayatDao.getBySiswaAndMateriSync(siswaId, materiId);
+            RiwayatBelajar riwayat = null; // Placeholder for API call
             return riwayat != null && riwayat.getStatus().equals(RiwayatBelajar.STATUS_SELESAI);
         } catch (Exception e) {
             return false;
@@ -189,7 +187,8 @@ public class BabProgressHelper {
                 int completedMateri = 0;
 
                 for (MateriKaidah materi : materiList) {
-                    RiwayatBelajar riwayat = riwayatDao.getTerakhirBySiswaAndMateri(siswaId, materi.getIdMateri());
+                    // TODO: Replace with API call - RiwayatBelajar riwayat = riwayatDao.getTerakhirBySiswaAndMateri(siswaId, materi.getIdMateri());
+                    RiwayatBelajar riwayat = null; // Placeholder for API call
                     if (riwayat != null && riwayat.getStatus().equals(RiwayatBelajar.STATUS_SELESAI)) {
                         completedMateri++;
                     }
@@ -212,7 +211,7 @@ public class BabProgressHelper {
     public void resetAllProgress(ResetProgressCallback callback) {
         executorService.execute(() -> {
             try {
-                riwayatDao.deleteAll();
+                // TODO: Replace with API calldeleteAll();
                 callback.onProgressReset();
             } catch (Exception e) {
                 callback.onError("Error resetting progress: " + e.getMessage());
