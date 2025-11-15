@@ -46,8 +46,6 @@ public class HomeFragment extends Fragment {
     private TextView tvKaidahCount;
     private TextView tvQuizCount;
     private TextView tvStatusProgress;
-    private Button btnContinueLearning;
-    private Button btnStartQuiz;
     private RecyclerView rvRecentKaidah;
 
     // Data
@@ -88,8 +86,6 @@ public class HomeFragment extends Fragment {
         tvKaidahCount = view.findViewById(R.id.tvKaidahCount);
         tvQuizCount = view.findViewById(R.id.tvQuizCount);
         tvStatusProgress = view.findViewById(R.id.tvStatusProgress);
-        btnContinueLearning = view.findViewById(R.id.btnContinueLearning);
-        btnStartQuiz = view.findViewById(R.id.btnStartQuiz);
         rvRecentKaidah = view.findViewById(R.id.rvRecentKaidah);
 
         // Setup RecyclerView
@@ -118,16 +114,6 @@ public class HomeFragment extends Fragment {
      * Setup listeners
      */
     private void setupListeners() {
-        btnContinueLearning.setOnClickListener(v -> {
-            // Navigate to kaidah list with continue learning
-            navigateToKaidahList();
-        });
-
-        btnStartQuiz.setOnClickListener(v -> {
-            // Navigate to quiz selection
-            navigateToQuizSelection();
-        });
-
         // Swipe refresh setup
         // TODO: Implement swipe refresh
     }
@@ -277,17 +263,6 @@ public class HomeFragment extends Fragment {
         } else {
             tvStatusProgress.setText("Luar biasa! 🎉");
         }
-
-        // Update continue learning button
-        if (progressPercentage < 100) {
-            btnContinueLearning.setVisibility(View.VISIBLE);
-            btnContinueLearning.setClickable(true);
-        } else {
-            btnContinueLearning.setVisibility(View.GONE);
-        }
-
-        // Show/hide start quiz based on available kaidah
-        btnStartQuiz.setVisibility(totalKaidah > 0 ? View.VISIBLE : View.GONE);
     }
 
     /**
@@ -305,13 +280,10 @@ public class HomeFragment extends Fragment {
         // Update status
         if (progressPercentage == 0) {
             tvStatusProgress.setText("Mulai belajar");
-            btnContinueLearning.setVisibility(View.GONE);
         } else if (progressPercentage < 100) {
             tvStatusProgress.setText("Lanjutkan belajar");
-            btnContinueLearning.setVisibility(View.VISIBLE);
         } else {
             tvStatusProgress.setText("Luar biasa! 🎉");
-            btnContinueLearning.setVisibility(View.GONE);
         }
     }
 
@@ -331,20 +303,7 @@ public class HomeFragment extends Fragment {
         // TODO: Implement error state UI
     }
 
-    /**
-     * Navigate to kaidah list
-     */
-    private void navigateToKaidahList() {
-        // TODO: Implement navigation to KaidahListFragment
-    }
-
-    /**
-     * Navigate to quiz selection
-     */
-    private void navigateToQuizSelection() {
-        // TODO: Implement navigation to QuizSelectionFragment
-    }
-
+    
     /**
      * Load progress data from API
      */

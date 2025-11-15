@@ -176,45 +176,7 @@
 
         </LinearLayout>
 
-        <!-- Quick Actions -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:text="Aksi Cepat"
-            android:textAppearance="@style/TextAppearance.PembelajaranKaidah.LabelLarge"
-            android:textColor="@color/text_primary" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:weightSum="2">
-
-            <!-- Continue Learning -->
-            <Button
-                android:id="@+id/btnContinueLearning"
-                style="@style/Widget.PembelajaranKaidah.Button"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:layout_weight="1"
-                android:text="Lanjut Belajar"
-                android:textSize="14sp" />
-
-            <!-- Start Quiz -->
-            <Button
-                android:id="@+id/btnStartQuiz"
-                style="@style/Widget.PembelajaranKaidah.Button.Outlined"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:layout_weight="1"
-                android:text="Mulai Quiz"
-                android:textSize="14sp" />
-
-        </LinearLayout>
-
+  
         <!-- Recent Kaidah -->
         <TextView
             android:layout_width="wrap_content"
