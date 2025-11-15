@@ -1,63 +1,61 @@
 package com.khozin.pembelajarankaidah.ui.profile;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.khozin.pembelajarankaidah.R;
+import com.khozin.pembelajarankaidah.utils.SessionManager;
 
 /**
- * Profile Fragment - Halaman profil siswa dengan empty state universal
+ * Profile Fragment - Halaman profil siswa sederhana
  */
 public class ProfileFragment extends Fragment {
 
-    private View emptyStateLayout;
+    private TextView tvStudentName;
+    private TextView tvStudentClass;
+    private SessionManager sessionManager;
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_profile_empty, container, false);
+        return inflater.inflate(R.layout.fragment_profile, container, false);
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        setupEmptyState(view);
+        initViews(view);
+        setupProfileData();
     }
 
-    private void setupEmptyState(View rootView) {
-        emptyStateLayout = rootView.findViewById(R.id.llEmptyState);
+    private void initViews(View rootView) {
+        tvStudentName = rootView.findViewById(R.id.tvStudentName);
+        tvStudentClass = rootView.findViewById(R.id.tvStudentClass);
+        sessionManager = new SessionManager(requireContext());
+    }
 
-        // Setup empty state for Profile
-        if (emptyStateLayout != null) {
-            ImageView ivIcon = emptyStateLayout.findViewById(R.id.ivEmptyIcon);
-            TextView tvTitle = emptyStateLayout.findViewById(R.id.tvEmptyTitle);
-            TextView tvDescription = emptyStateLayout.findViewById(R.id.tvEmptyDescription);
-            Button btnAction = emptyStateLayout.findViewById(R.id.btnAction);
+    private void setupProfileData() {
+        if (sessionManager != null) {
+            // Get student data from session
+            String studentName = sessionManager.getUserName();
+            String studentClass = sessionManager.getUserClass();
 
-            ivIcon.setImageResource(R.drawable.empty_state_universal);
-            tvTitle.setText("Profil Belum Lengkap");
-            tvDescription.setText("Lengkapi profil Anda untuk mendapatkan pengalaman belajar yang lebih personal.");
-            btnAction.setText("Edit Profil");
-            btnAction.setVisibility(View.VISIBLE);
-            btnAction.setOnClickListener(v -> {
-                // Navigate to profile edit or login
-                if (getActivity() != null) {
-                    // TODO: Implement profile edit
-                    // For now, show a toast message
-                    android.widget.Toast.makeText(getContext(), "Edit Profil", android.widget.Toast.LENGTH_SHORT).show();
-                }
-            });
+            // Set data to views
+            if (tvStudentName != null) {
+                tvStudentName.setText(studentName != null && !studentName.isEmpty() ? studentName : "Nama Siswa");
+            }
+
+            if (tvStudentClass != null) {
+                tvStudentClass.setText(studentClass != null && !studentClass.isEmpty() ? studentClass : "Kelas");
+            }
         }
     }
 }
