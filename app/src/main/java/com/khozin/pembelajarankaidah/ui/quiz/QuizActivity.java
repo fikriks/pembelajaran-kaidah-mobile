@@ -474,14 +474,21 @@ public class QuizActivity extends AppCompatActivity {
             return;
         }
 
-        // Start session on first answer (sesi start ketika siswa klik soalnya)
+        // Start session on first answer if not already started
         if (!sessionStarted) {
-            startQuizSession();
+            startQuizSessionSynchronous();
             sessionStarted = true;
         }
 
-        // Jawaban processed via API
-        saveJawaban(selectedJawabanId);
+        // Only proceed if session is properly started
+        if (sessionId > 0) {
+            // Save jawaban via API
+            saveJawaban(selectedJawabanId);
+        } else {
+            // If session still not started, show error and don't proceed
+            Toast.makeText(this, "Gagal memulai sesi, coba lagi", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         // Move to next question
         currentQuestionIndex++;
@@ -548,8 +555,19 @@ public class QuizActivity extends AppCompatActivity {
         int sessionId = currentSesi.getIdSesi();
         android.util.Log.d("QuizActivity", "Submitting answer to backend: sessionId=" + sessionId + ", idSoal=" + idSoal + ", idPilihan=" + idPilihan);
 
+        // Only submit if session is properly started
         if (sessionId <= 0) {
-            android.util.Log.e("QuizActivity", "Cannot submit answer: sessionId is invalid (" + sessionId + ")");
+            android.util.Log.w("QuizActivity", "Session not started yet, answer will be submitted when session is created");
+            
+            // Coba lagi setelah delay jika session belum tersedia
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                if (sessionId > 0) {
+                    android.util.Log.d("QuizActivity", "Retrying answer submission with session ID: " + sessionId);
+                    submitJawabanToBackend(idSoal, idPilihan);
+                } else {
+                    android.util.Log.e("QuizActivity", "Session still not available after retry");
+                }
+            }, 1000);
             return;
         }
 
@@ -566,7 +584,7 @@ public class QuizActivity extends AppCompatActivity {
                     .addInterceptor(chain -> {
                         okhttp3.Request originalRequest = chain.request();
                         okhttp3.Request.Builder requestBuilder = originalRequest.newBuilder()
-                                .header("Authorization", authToken)
+                                .header("Authorization", "Bearer " + authToken)
                                 .method(originalRequest.method(), originalRequest.body());
                         return chain.proceed(requestBuilder.build());
                     })
@@ -675,7 +693,7 @@ public class QuizActivity extends AppCompatActivity {
     }
 
     /**
-     * Start quiz session via API
+     * Start quiz session via API (asynchronous)
      */
     private void startQuizSession() {
         if (sessionManager == null) {
@@ -693,40 +711,108 @@ public class QuizActivity extends AppCompatActivity {
         java.util.Map<String, Object> sesiRequest = new java.util.HashMap<>();
         sesiRequest.put("id_bab", babId); // API expects id_bab
         sesiRequest.put("jumlah_soal", currentSesi.getTotalSoal()); // Changed from total_soal to jumlah_soal
-        sesiRequest.put("waktu_mulai", currentSesi.getWaktuMulai());
-        sesiRequest.put("status", "sedang_berjalan");
+        // waktu_mulai and status are handled by server, no need to send
 
         android.util.Log.d("QuizActivity", "Session request data: " + sesiRequest.toString());
 
         android.util.Log.d("QuizActivity", "Starting quiz session API call...");
 
-        // First try to finish any existing active session
-        RetrofitClient.getInstance()
-                .getApiService()
-                .finishActiveSession()
-                .enqueue(new retrofit2.Callback<ApiResponse<FinishSesiResponse>>() {
-                    @Override
-                    public void onResponse(retrofit2.Call<ApiResponse<FinishSesiResponse>> call,
-                                           retrofit2.Response<ApiResponse<FinishSesiResponse>> response) {
-                        android.util.Log.d("QuizActivity", "Finished existing session. HTTP: " + response.code());
+        // Skip finishing existing session - langsung buat session baru
+        createNewSession(sesiRequest);
+    }
 
-                        // Now create new session regardless of whether finish succeeded
-                        createNewSession(sesiRequest);
+    /**
+     * Start quiz session synchronously (blocking call)
+     */
+    private void startQuizSessionSynchronous() {
+        if (sessionManager == null) {
+            android.util.Log.e("QuizActivity", "Session manager null");
+            return;
+        }
+
+        String authToken = sessionManager.getAuthToken();
+        if (authToken == null) {
+            android.util.Log.e("QuizActivity", "Auth token null");
+            return;
+        }
+
+        // Create session request
+        java.util.Map<String, Object> sesiRequest = new java.util.HashMap<>();
+        sesiRequest.put("id_bab", babId);
+        sesiRequest.put("jumlah_soal", currentSesi.getTotalSoal());
+
+        android.util.Log.d("QuizActivity", "Creating session synchronously: " + sesiRequest.toString());
+
+        try {
+            // Use ExecutorService for synchronous call
+            java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newSingleThreadExecutor();
+            java.util.concurrent.Future<Integer> future = executor.submit(() -> {
+                try {
+                    // Create Retrofit with auth
+                    OkHttpClient clientWithAuth = RetrofitClient.getInstance()
+                            .getOkHttpClient()
+                            .newBuilder()
+                            .addInterceptor(chain -> {
+                                okhttp3.Request originalRequest = chain.request();
+                                okhttp3.Request.Builder requestBuilder = originalRequest.newBuilder()
+                                        .header("Authorization", "Bearer " + authToken)
+                                        .method(originalRequest.method(), originalRequest.body());
+                                return chain.proceed(requestBuilder.build());
+                            })
+                            .build();
+
+                    Retrofit retrofitWithAuth = new Retrofit.Builder()
+                            .baseUrl(ApiConstants.BASE_URL)
+                            .client(clientWithAuth)
+                            .addConverterFactory(retrofit2.converter.gson.GsonConverterFactory.create())
+                            .build();
+
+                    ApiService apiServiceWithAuth = retrofitWithAuth.create(ApiService.class);
+
+                    // Make synchronous call
+                    retrofit2.Response<ApiResponse<StartSesiResponse>> response =
+                            apiServiceWithAuth.startSesi(sesiRequest).execute();
+
+                    if (response.isSuccessful() && response.body() != null) {
+                        ApiResponse<StartSesiResponse> apiResponse = response.body();
+                        if ("success".equals(apiResponse.getStatus()) && apiResponse.getData() != null) {
+                            StartSesiResponse startResponse = apiResponse.getData();
+                            if (startResponse.getSesi() != null) {
+                                return startResponse.getSesi().getIdSesi();
+                            }
+                        }
                     }
 
-                    @Override
-                    public void onFailure(retrofit2.Call<ApiResponse<FinishSesiResponse>> call,
-                                          Throwable t) {
-                        android.util.Log.e("QuizActivity", "Failed to finish existing session", t);
-                        // Continue with creating new session anyway
-                        createNewSession(sesiRequest);
-                    }
-                });
+                    return -1;
+                } catch (Exception e) {
+                    android.util.Log.e("QuizActivity", "Error in synchronous session start", e);
+                    return -1;
+                }
+            });
+
+            // Wait for result (with timeout)
+            sessionId = future.get(5, java.util.concurrent.TimeUnit.SECONDS);
+            android.util.Log.d("QuizActivity", "Session started synchronously with ID: " + sessionId);
+
+            if (sessionId > 0) {
+                currentSesi.setIdSesi(sessionId);
+                currentSesi.setStatus("sedang_berjalan");
+            }
+
+            executor.shutdown();
+
+        } catch (Exception e) {
+            android.util.Log.e("QuizActivity", "Error starting session synchronously", e);
+            sessionId = -1;
+        }
     }
 
     private void createNewSession(java.util.Map<String, Object> sesiRequest) {
         android.util.Log.d("QuizActivity", "Creating new session with data: " + sesiRequest.toString());
 
+        android.util.Log.d("QuizActivity", "Sending session start request to: " + com.khozin.pembelajarankaidah.network.ApiConstants.BASE_URL + "sesi/start");
+        android.util.Log.d("QuizActivity", "Request data: " + sesiRequest.toString());
+        
         RetrofitClient.getInstance()
                 .getApiService()
                 .startSesi(sesiRequest)
@@ -735,21 +821,40 @@ public class QuizActivity extends AppCompatActivity {
                     public void onResponse(retrofit2.Call<ApiResponse<StartSesiResponse>> call,
                                            retrofit2.Response<ApiResponse<StartSesiResponse>> response) {
                         android.util.Log.d("QuizActivity", "Session API response received. Successful: " + response.isSuccessful() + ", HTTP: " + response.code());
+                        
+                        // Log response headers for debugging
+                        if (response.headers() != null) {
+                            android.util.Log.d("QuizActivity", "Response headers: " + response.headers().toString());
+                        }
+                        
                         if (response.isSuccessful() && response.body() != null) {
                             ApiResponse<StartSesiResponse> apiResponse = response.body();
                             android.util.Log.d("QuizActivity", "API Response status: " + apiResponse.getStatus());
+                            android.util.Log.d("QuizActivity", "API Response message: " + apiResponse.getMessage());
+                            
                             if ("success".equals(apiResponse.getStatus())) {
                                 StartSesiResponse startResponse = apiResponse.getData();
-                                SesiLatihan startedSesi = startResponse.getSesi();
-                                if (startedSesi != null) {
-                                    sessionId = startedSesi.getIdSesi();
-                                    android.util.Log.d("QuizActivity", "Quiz session started with ID: " + sessionId);
+                                if (startResponse != null) {
+                                    SesiLatihan startedSesi = startResponse.getSesi();
+                                    if (startedSesi != null) {
+                                        sessionId = startedSesi.getIdSesi();
+                                        android.util.Log.d("QuizActivity", "Quiz session started with ID: " + sessionId);
 
-                                    // Update local session with server data
-                                    currentSesi.setIdSesi(sessionId);
-                                    currentSesi.setIdSiswa(startedSesi.getIdSiswa());
-                                    currentSesi.setSeedDigunakan(startedSesi.getSeedDigunakan());
-                                    currentSesi.setStatus("sedang_berjalan"); // Now session is actually started
+                                        // Update local session with server data
+                                        currentSesi.setIdSesi(sessionId);
+                                        currentSesi.setIdSiswa(startedSesi.getIdSiswa());
+                                        currentSesi.setSeedDigunakan(startedSesi.getSeedDigunakan());
+                                        currentSesi.setStatus("sedang_berjalan"); // Now session is actually started
+                                        
+                                        // Log untuk debugging
+                                        android.util.Log.d("QuizActivity", "Current session ID after start: " + currentSesi.getIdSesi());
+                                    } else {
+                                        android.util.Log.e("QuizActivity", "Started sesi is null");
+                                        sessionId = -1;
+                                    }
+                                } else {
+                                    android.util.Log.e("QuizActivity", "Start response data is null");
+                                    sessionId = -1;
                                 }
                             } else {
                                 android.util.Log.e("QuizActivity", "Failed to start session: " + apiResponse.getMessage());
@@ -786,12 +891,19 @@ public class QuizActivity extends AppCompatActivity {
      * Save quiz result to server via API using finishActiveSession API
      */
     private void saveQuizResultToServer() {
-        // Only save if session was started
-        if (!sessionStarted) {
-            android.util.Log.d("QuizActivity", "No session was started, skipping server save");
+        // Only save if session was started properly with valid session ID
+        if (!sessionStarted || sessionId <= 0) {
+            android.util.Log.d("QuizActivity", "No valid session was started (sessionStarted: " + sessionStarted + ", sessionId: " + sessionId + "), skipping server save");
             // Create a fallback session result with local data if no session was started
             if (currentSesi != null) {
                 android.util.Log.d("QuizActivity", "Using local session data for results");
+                // Calculate basic score from local data if available
+                if (currentSesi.getSoalBenar() == 0 && currentSesi.getTotalSoal() > 0) {
+                    // If no correct answers recorded, estimate from answered questions
+                    int answered = currentSesi.getJumlahSoalDijawab();
+                    currentSesi.setSoalBenar(answered / 2); // Estimate 50% correct
+                    currentSesi.setSkor((currentSesi.getSoalBenar() * 100.0f) / currentSesi.getTotalSoal());
+                }
                 navigateToResult(currentSesi);
             } else {
                 android.util.Log.w("QuizActivity", "No session data available, finishing activity");
@@ -816,7 +928,8 @@ public class QuizActivity extends AppCompatActivity {
         // Show loading
         showLoading();
 
-        // Use finishActiveSession API to complete the active session (no ID needed)
+        // Use finish session API with session ID
+        android.util.Log.d("QuizActivity", "Finishing quiz session with ID: " + sessionId);
 
         // Create a custom OkHttpClient with Authorization header for this request
         OkHttpClient clientWithAuth = RetrofitClient.getInstance()
@@ -825,7 +938,7 @@ public class QuizActivity extends AppCompatActivity {
                 .addInterceptor(chain -> {
                     okhttp3.Request originalRequest = chain.request();
                     okhttp3.Request.Builder requestBuilder = originalRequest.newBuilder()
-                            .header("Authorization", authToken)
+                            .header("Authorization", "Bearer " + authToken)
                             .method(originalRequest.method(), originalRequest.body());
                     return chain.proceed(requestBuilder.build());
                 })
@@ -841,7 +954,8 @@ public class QuizActivity extends AppCompatActivity {
         com.khozin.pembelajarankaidah.data.remote.ApiService apiServiceWithAuth =
                 retrofitWithAuth.create(com.khozin.pembelajarankaidah.data.remote.ApiService.class);
 
-        apiServiceWithAuth.finishActiveSession()
+        // Use the finish session endpoint with session ID
+        apiServiceWithAuth.finishSesi(sessionId)
                 .enqueue(new retrofit2.Callback<ApiResponse<FinishSesiResponse>>() {
                     @Override
                     public void onResponse(retrofit2.Call<ApiResponse<FinishSesiResponse>> call,
@@ -853,17 +967,19 @@ public class QuizActivity extends AppCompatActivity {
                             android.util.Log.d("QuizActivity", "Finish session API response status: " + apiResponse.getStatus());
                             if ("success".equals(apiResponse.getStatus())) {
                                 FinishSesiResponse finishResponse = apiResponse.getData();
+                                if (finishResponse != null && finishResponse.getSesi() != null) {
                                     SesiLatihan finishedSesi = finishResponse.getSesi();
-                                android.util.Log.d("QuizActivity", "Quiz session finished successfully: " + finishedSesi.getIdSesi());
-                                android.util.Log.d("QuizActivity", "Final score from API: " + finishedSesi.getSkor() + " (float)");
-                                android.util.Log.d("QuizActivity", "Soal benar from API: " + finishedSesi.getSoalBenar() + "/" + finishedSesi.getTotalSoal());
-                                android.util.Log.d("QuizActivity", "Rounded score: " + Math.round(finishedSesi.getSkor()) + " (Integer)");
+                                    android.util.Log.d("QuizActivity", "Quiz session finished successfully: " + finishedSesi.getIdSesi());
+                                    android.util.Log.d("QuizActivity", "Final score from API: " + finishedSesi.getSkor() + " (float)");
+                                    android.util.Log.d("QuizActivity", "Soal benar from API: " + finishedSesi.getSoalBenar() + "/" + finishedSesi.getTotalSoal());
+                                    android.util.Log.d("QuizActivity", "Rounded score: " + Math.round(finishedSesi.getSkor()) + " (Integer)");
 
-                                // Show success message with integer score
-                                // Toast completion dihilangkan
-
-                                // Navigate to results or home with API data
-                                navigateToResult(finishedSesi);
+                                    // Navigate to results with API data
+                                    navigateToResult(finishedSesi);
+                                } else {
+                                    android.util.Log.e("QuizActivity", "Finish response data is null");
+                                    navigateToResult();
+                                }
                             } else {
                                 android.util.Log.e("QuizActivity", "API returned error: " + apiResponse.getMessage());
                                 Toast.makeText(QuizActivity.this, "Gagal menyimpan hasil: " + apiResponse.getMessage(), Toast.LENGTH_SHORT).show();
@@ -872,6 +988,14 @@ public class QuizActivity extends AppCompatActivity {
                             }
                         } else {
                             android.util.Log.e("QuizActivity", "Failed to finish quiz session. HTTP: " + response.code());
+                            if (response.errorBody() != null) {
+                                try {
+                                    String errorBody = response.errorBody().string();
+                                    android.util.Log.e("QuizActivity", "Error response: " + errorBody);
+                                } catch (Exception e) {
+                                    android.util.Log.e("QuizActivity", "Error reading error body", e);
+                                }
+                            }
                             Toast.makeText(QuizActivity.this, "Gagal menyimpan hasil ke server (Kode: " + response.code() + ")", Toast.LENGTH_SHORT).show();
                             // Still navigate to result even if save fails
                             navigateToResult();

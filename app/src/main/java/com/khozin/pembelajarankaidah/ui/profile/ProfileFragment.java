@@ -47,6 +47,11 @@ public class ProfileFragment extends Fragment {
         tvStudentClass = rootView.findViewById(R.id.tvStudentClass);
         btnLogout = rootView.findViewById(R.id.btnLogout);
         sessionManager = new SessionManager(requireContext());
+
+        // Set logout icon color to white
+        if (btnLogout != null) {
+            btnLogout.setIconTint(getResources().getColorStateList(android.R.color.white));
+        }
     }
 
     private void setupProfileData() {

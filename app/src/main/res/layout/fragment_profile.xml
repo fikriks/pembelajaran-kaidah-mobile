@@ -117,6 +117,7 @@
                     app:icon="@drawable/ic_logout"
                     app:iconGravity="textStart"
                     app:iconPadding="8dp"
+                    app:iconTint="@android:color/white"
                     android:layout_marginTop="16dp" />
 
             </LinearLayout>
