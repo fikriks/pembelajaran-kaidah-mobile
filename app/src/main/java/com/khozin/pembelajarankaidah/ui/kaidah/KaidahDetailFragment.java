@@ -1127,7 +1127,7 @@ public class KaidahDetailFragment extends Fragment implements BabCongratsFragmen
                                 });
                             }
                         } else {
-                            android.util.Log.e("KaidahDetail", "Kaidah " + kaidahId + " not found in fresh API response");
+                            android.util.Log.e("KaidahDetail", "Kaidah " + kaidahId + " not found in API response");
                             if (isAdded() && getActivity() != null) {
                                 getActivity().runOnUiThread(() -> {
                                     Toast.makeText(getContext(), "Kaidah tidak ditemukan di server", Toast.LENGTH_SHORT).show();

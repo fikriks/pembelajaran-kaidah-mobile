@@ -230,7 +230,11 @@ public class MainActivity extends AppCompatActivity implements BabCongratsFragme
 
         // Navigate to kaidah list
         if (bottomNavigation != null) {
+            // Set flag to prevent listener interference
+            isProgrammaticNavigation = true;
+            android.util.Log.d("MainActivity", "🚩 Set isProgrammaticNavigation flag for navigateToBabList");
             bottomNavigation.setSelectedItemId(R.id.navigation_kaidah);
+            android.util.Log.d("MainActivity", "✅ Navigated to kaidah tab (bab list)");
         }
     }
 

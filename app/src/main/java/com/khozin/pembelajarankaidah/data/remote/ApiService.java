@@ -115,7 +115,9 @@ public interface ApiService {
     );
 
     @GET(ApiConstants.SESI_ACTIVE)
-    Call<ApiResponse<Map<String, Object>>> getActiveSesi();
+    Call<ApiResponse<Map<String, Object>>> getActiveSesi(
+            @Header("Authorization") String authToken
+    );
 
     @GET(ApiConstants.SESI_DETAIL)
     Call<ApiResponse<SesiLatihan>> getSesiDetail(
@@ -129,7 +131,18 @@ public interface ApiService {
     );
 
     @POST(ApiConstants.SESI_FINISH)
-    Call<ApiResponse<FinishSesiResponse>> finishActiveSession();
+    Call<ApiResponse<FinishSesiResponse>> finishActiveSession(
+            @Header("Authorization") String authToken
+    );
+
+    /**
+     * Cancel/delete active session tanpa menyelesaikan
+     * Digunakan ketika user keluar dari quiz sebelum selesai
+     */
+    @POST(ApiConstants.SESI_CANCEL)
+    Call<ApiResponse<Map<String, Object>>> cancelActiveSession(
+            @Header("Authorization") String authToken
+    );
 
     @POST(ApiConstants.SESI_FINISH_WITH_ID)
     Call<ApiResponse<FinishSesiResponse>> finishSesi(

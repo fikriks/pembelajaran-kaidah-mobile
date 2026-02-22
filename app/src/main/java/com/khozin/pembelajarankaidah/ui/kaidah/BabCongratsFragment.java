@@ -40,6 +40,7 @@ public class BabCongratsFragment extends Fragment {
     private TextView tvCongratsMessage;
     private TextView ivCongratsIcon;
     private Button btnNextBab;
+    private Button btnKembali;
 
     private Bab currentBab;
     private Bab nextBab;
@@ -98,6 +99,7 @@ public class BabCongratsFragment extends Fragment {
         tvCongratsMessage = view.findViewById(R.id.tv_congrats_message);
         ivCongratsIcon = view.findViewById(R.id.iv_congrats_icon);
         btnNextBab = view.findViewById(R.id.btn_next_bab);
+        btnKembali = view.findViewById(R.id.btn_kembali);
     }
 
     /**
@@ -310,6 +312,7 @@ public class BabCongratsFragment extends Fragment {
     }
 
     private void setupClickListeners() {
+        // Next bab button click listener
         btnNextBab.setOnClickListener(v -> {
             android.util.Log.d("BabCongrats", "=== BAB CONGRATS BUTTON CLICKED ===");
             android.util.Log.d("BabCongrats", "🎯 Next bab button clicked");
@@ -342,7 +345,20 @@ public class BabCongratsFragment extends Fragment {
                     android.util.Log.e("BabCongrats", "❌ Activity does not implement KaidahNavigationListener");
                 }
             }
-              });
+        });
+
+        // Kembali button click listener - always navigates to bab list
+        btnKembali.setOnClickListener(v -> {
+            android.util.Log.d("BabCongrats", "=== KEMBALI BUTTON CLICKED ===");
+            android.util.Log.d("BabCongrats", "🔙 Kembali button clicked - navigating to bab list");
+
+            if (getActivity() instanceof KaidahNavigationListener) {
+                android.util.Log.d("BabCongrats", "🚀 Calling navigateToBabList()");
+                ((KaidahNavigationListener) getActivity()).navigateToBabList();
+            } else {
+                android.util.Log.e("BabCongrats", "❌ Activity does not implement KaidahNavigationListener");
+            }
+        });
     }
 
     /**

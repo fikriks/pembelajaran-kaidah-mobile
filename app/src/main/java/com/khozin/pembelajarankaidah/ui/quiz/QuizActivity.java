@@ -1,6 +1,7 @@
 package com.khozin.pembelajarankaidah.ui.quiz;
 
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.view.View;
@@ -132,8 +133,8 @@ public class QuizActivity extends AppCompatActivity {
             setupViewModel();
             setupLCM();
 
-            // Load quiz questions (session will start when user answers first question)
-            loadQuizQuestions(kaidahId);
+            // Check for active session before loading quiz
+            checkActiveSessionAndLoadQuiz(kaidahId);
 
         } catch (Exception e) {
             android.util.Log.e("QuizActivity", "Error initializing quiz activity: " + e.getMessage(), e);
@@ -671,7 +672,8 @@ public class QuizActivity extends AppCompatActivity {
         builder.setMessage("Apakah Anda yakin ingin keluar dari quiz? Progress Anda akan hilang.");
         builder.setPositiveButton("Ya", (dialog, which) -> {
             isExiting = true;
-            finish();
+            // Cancel active session before exiting
+            cancelActiveSessionAndExit();
         });
         builder.setNegativeButton("Tidak", (dialog, which) -> {
             dialog.dismiss();
@@ -683,6 +685,44 @@ public class QuizActivity extends AppCompatActivity {
             isExiting = false;
         });
         builder.show();
+    }
+
+    /**
+     * Cancel active session and exit quiz
+     * Calls the API to cancel/delete the active session before finishing the activity
+     */
+    private void cancelActiveSessionAndExit() {
+        if (sessionManager == null || !sessionManager.isLoggedIn()) {
+            android.util.Log.d("QuizActivity", "No active session or not logged in, exiting directly");
+            finish();
+            return;
+        }
+
+        String authToken = sessionManager.getAuthToken();
+        ApiService apiService = RetrofitClient.getInstance().getRetrofit().create(ApiService.class);
+
+        android.util.Log.d("QuizActivity", "Cancelling active session before exit...");
+
+        apiService.cancelActiveSession("Bearer " + authToken).enqueue(new retrofit2.Callback<ApiResponse<java.util.Map<String, Object>>>() {
+            @Override
+            public void onResponse(retrofit2.Call<ApiResponse<java.util.Map<String, Object>>> call, retrofit2.Response<ApiResponse<java.util.Map<String, Object>>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    ApiResponse<java.util.Map<String, Object>> apiResponse = response.body();
+                    android.util.Log.d("QuizActivity", "Session cancelled successfully: " + apiResponse.getMessage());
+                } else {
+                    android.util.Log.w("QuizActivity", "Failed to cancel session: " + response.code());
+                }
+                // Exit regardless of API response
+                finish();
+            }
+
+            @Override
+            public void onFailure(retrofit2.Call<ApiResponse<java.util.Map<String, Object>>> call, Throwable t) {
+                android.util.Log.e("QuizActivity", "Network error cancelling session: " + t.getMessage());
+                // Exit even on network error
+                finish();
+            }
+        });
     }
 
     /**
@@ -781,6 +821,21 @@ public class QuizActivity extends AppCompatActivity {
                                 return startResponse.getSesi().getIdSesi();
                             }
                         }
+                    } else if (response.code() == 400) {
+                        // Check for active session error
+                        try {
+                            if (response.errorBody() != null) {
+                                String errorBody = response.errorBody().string();
+                                android.util.Log.e("QuizActivity", "Error response body: " + errorBody);
+                                if (errorBody.contains("Anda masih memiliki sesi pembelajaran yang aktif")) {
+                                    // Show dialog on main thread
+                                    runOnUiThread(() -> showActiveSessionDialog());
+                                    return -1;
+                                }
+                            }
+                        } catch (Exception e) {
+                            android.util.Log.e("QuizActivity", "Could not read error body", e);
+                        }
                     }
 
                     return -1;
@@ -797,6 +852,13 @@ public class QuizActivity extends AppCompatActivity {
             if (sessionId > 0) {
                 currentSesi.setIdSesi(sessionId);
                 currentSesi.setStatus("sedang_berjalan");
+            } else {
+                // Session creation failed - check if it was due to active session
+                android.util.Log.e("QuizActivity", "Session creation failed with ID: -1");
+                // The dialog should have been shown already in the ExecutorService
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Gagal memulai sesi. Silakan coba lagi.", Toast.LENGTH_SHORT).show();
+                });
             }
 
             executor.shutdown();
@@ -804,6 +866,9 @@ public class QuizActivity extends AppCompatActivity {
         } catch (Exception e) {
             android.util.Log.e("QuizActivity", "Error starting session synchronously", e);
             sessionId = -1;
+            runOnUiThread(() -> {
+                Toast.makeText(this, "Gagal memulai sesi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            });
         }
     }
 
@@ -858,8 +923,15 @@ public class QuizActivity extends AppCompatActivity {
                                 }
                             } else {
                                 android.util.Log.e("QuizActivity", "Failed to start session: " + apiResponse.getMessage());
-                                // For development, continue with local session
-                                sessionId = -1; // Indicate API session not started
+                                // Check if error is about active session
+                                if (response.code() == 400) {
+                                    runOnUiThread(() -> {
+                                        showActiveSessionDialog();
+                                    });
+                                } else {
+                                    // For other errors, continue with local session
+                                    sessionId = -1;
+                                }
                             }
                         } else {
                             android.util.Log.e("QuizActivity", "Failed to start session. HTTP: " + response.code());
@@ -868,6 +940,13 @@ public class QuizActivity extends AppCompatActivity {
                                 if (response.errorBody() != null) {
                                     String errorBody = response.errorBody().string();
                                     android.util.Log.e("QuizActivity", "Error response body: " + errorBody);
+                                    // Check if error is about active session
+                                    if (errorBody.contains("Anda masih memiliki sesi pembelajaran yang aktif") || response.code() == 400) {
+                                        runOnUiThread(() -> {
+                                            showActiveSessionDialog();
+                                        });
+                                        return;
+                                    }
                                 }
                             } catch (Exception e) {
                                 android.util.Log.e("QuizActivity", "Could not read error body", e);
@@ -1106,6 +1185,14 @@ public class QuizActivity extends AppCompatActivity {
         // TODO: Hide loading indicator
     }
 
+    /**
+     * Handle back button press
+     */
+    @Override
+    public void onBackPressed() {
+        handleOnBackPressed();
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -1128,5 +1215,177 @@ public class QuizActivity extends AppCompatActivity {
         } else {
             finish();
         }
+    }
+
+    /**
+     * Show dialog when there's an active session
+     * Offers options to continue existing session or discard and start new
+     */
+    private void showActiveSessionDialog() {
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        builder.setTitle("Sesi Aktif Ditemukan");
+        builder.setMessage("Anda masih memiliki sesi pembelajaran yang aktif. Apakah Anda ingin melanjutkan sesi yang ada atau memulai sesi baru?");
+        builder.setPositiveButton("Lanjutkan Sesi", (dialog, which) -> {
+            // Load the active session and continue
+            loadActiveSession();
+        });
+        builder.setNegativeButton("Mulai Baru", (dialog, which) -> {
+            // Finish the active session first, then start a new one
+            finishActiveSessionAndStartNew();
+        });
+        builder.setCancelable(false);
+        builder.show();
+    }
+
+    /**
+     * Load the active session for the user
+     */
+    private void loadActiveSession() {
+        android.util.Log.d("QuizActivity", "Loading active session...");
+
+        String authToken = sessionManager.getAuthToken();
+        if (authToken == null) {
+            Toast.makeText(this, "Session tidak valid", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+
+        // Call API to get active session
+        ApiService apiService = RetrofitClient.getInstance().getRetrofit().create(ApiService.class);
+        apiService.getActiveSesi("Bearer " + authToken).enqueue(new retrofit2.Callback<ApiResponse<java.util.Map<String, Object>>>() {
+            @Override
+            public void onResponse(retrofit2.Call<ApiResponse<java.util.Map<String, Object>>> call, retrofit2.Response<ApiResponse<java.util.Map<String, Object>>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    ApiResponse<java.util.Map<String, Object>> apiResponse = response.body();
+                    if ("success".equals(apiResponse.getStatus()) && apiResponse.getData() != null) {
+                        // Active session found, navigate to it
+                        Toast.makeText(QuizActivity.this, "Melanjutkan sesi aktif...", Toast.LENGTH_SHORT).show();
+                        // For now, just finish - the user can access the active session from the quiz list
+                        finish();
+                    } else {
+                        Toast.makeText(QuizActivity.this, "Tidak ada sesi aktif", Toast.LENGTH_SHORT).show();
+                        finish();
+                    }
+                } else {
+                    Toast.makeText(QuizActivity.this, "Gagal memuat sesi aktif", Toast.LENGTH_SHORT).show();
+                    finish();
+                }
+            }
+
+            @Override
+            public void onFailure(retrofit2.Call<ApiResponse<java.util.Map<String, Object>>> call, Throwable t) {
+                Toast.makeText(QuizActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                finish();
+            }
+        });
+    }
+
+    /**
+     * Finish the active session and start a new one
+     */
+    private void finishActiveSessionAndStartNew() {
+        android.util.Log.d("QuizActivity", "Finishing active session and starting new...");
+
+        String authToken = sessionManager.getAuthToken();
+        if (authToken == null) {
+            Toast.makeText(this, "Session tidak valid", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+
+        // Call API to finish active session
+        ApiService apiService = RetrofitClient.getInstance().getRetrofit().create(ApiService.class);
+        apiService.finishActiveSession("Bearer " + authToken).enqueue(new retrofit2.Callback<ApiResponse<FinishSesiResponse>>() {
+            @Override
+            public void onResponse(retrofit2.Call<ApiResponse<FinishSesiResponse>> call, retrofit2.Response<ApiResponse<FinishSesiResponse>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    ApiResponse<FinishSesiResponse> apiResponse = response.body();
+                    if ("success".equals(apiResponse.getStatus())) {
+                        Toast.makeText(QuizActivity.this, "Sesi lama selesai, memulai sesi baru...", Toast.LENGTH_SHORT).show();
+                        // Retry starting the quiz
+                        retryStartQuiz();
+                    } else {
+                        Toast.makeText(QuizActivity.this, "Gagal menyelesaikan sesi lama: " + apiResponse.getMessage(), Toast.LENGTH_SHORT).show();
+                        finish();
+                    }
+                } else {
+                    Toast.makeText(QuizActivity.this, "Gagal menyelesaikan sesi lama (HTTP " + response.code() + ")", Toast.LENGTH_SHORT).show();
+                    finish();
+                }
+            }
+
+            @Override
+            public void onFailure(retrofit2.Call<ApiResponse<FinishSesiResponse>> call, Throwable t) {
+                Toast.makeText(QuizActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                finish();
+            }
+        });
+    }
+
+    /**
+     * Retry starting the quiz after finishing active session
+     */
+    private void retryStartQuiz() {
+        android.util.Log.d("QuizActivity", "Retrying quiz start...");
+        // Reload the activity to start fresh
+        Intent intent = getIntent();
+        finish();
+        startActivity(intent);
+    }
+
+    /**
+     * Check for active session before loading quiz
+     * If there's an active session, show dialog to handle it
+     */
+    private void checkActiveSessionAndLoadQuiz(int kaidahId) {
+        android.util.Log.d("QuizActivity", "Checking for active session before loading quiz...");
+
+        String authToken = sessionManager.getAuthToken();
+        if (authToken == null) {
+            Toast.makeText(this, "Session tidak valid", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+
+        ApiService apiService = RetrofitClient.getInstance().getRetrofit().create(ApiService.class);
+        apiService.getActiveSesi("Bearer " + authToken).enqueue(new retrofit2.Callback<ApiResponse<java.util.Map<String, Object>>>() {
+            @Override
+            public void onResponse(retrofit2.Call<ApiResponse<java.util.Map<String, Object>>> call, retrofit2.Response<ApiResponse<java.util.Map<String, Object>>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    ApiResponse<java.util.Map<String, Object>> apiResponse = response.body();
+                    if ("success".equals(apiResponse.getStatus()) && apiResponse.getData() != null) {
+                        // Active session exists - show dialog
+                        runOnUiThread(() -> {
+                            showActiveSessionDialog();
+                        });
+                    } else {
+                        // No active session - proceed to load quiz
+                        runOnUiThread(() -> {
+                            loadQuizQuestions(kaidahId);
+                        });
+                    }
+                } else if (response.code() == 401) {
+                    // Unauthorized - token might be expired
+                    runOnUiThread(() -> {
+                        Toast.makeText(QuizActivity.this, "Session kadaluars. Silakan login kembali.", Toast.LENGTH_SHORT).show();
+                        finish();
+                    });
+                } else {
+                    // Error checking active session - proceed anyway
+                    runOnUiThread(() -> {
+                        loadQuizQuestions(kaidahId);
+                    });
+                }
+            }
+
+            @Override
+            public void onFailure(retrofit2.Call<ApiResponse<java.util.Map<String, Object>>> call, Throwable t) {
+                android.util.Log.e("QuizActivity", "Error checking active session", t);
+                // Proceed to load quiz even if check fails
+                runOnUiThread(() -> {
+                    loadQuizQuestions(kaidahId);
+                });
+            }
+        });
     }
 }
